@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Geolocation and elevation test</title>
+        <style type="text/css">
+          html { height: 100% }
+          body { height: 100%; margin: 0px; padding: 0px }
+          #map_canvas { height: 100% }
+          #status { color: #FF0000; position:fixed; top:15px; left:105px; z-index:200;}
+        </style>
+		
+        <script type="text/javascript" src="../js/libs/Stats.js"></script> 
+        <script type="text/javascript" src="../js/libs/webgl-utils.js"></script> 
+        <script type="text/javascript" src="../js/libs/glMatrix-0.9.5.min.js"></script> 
+        <script type="text/javascript" src="../js/libs/webgl-debug.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/SimpleCamera.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/HoverCamera.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/ProjectionPerspectiveMatrix.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLModelShader.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLModel.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLTexture.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLTextureFilter.js"></script> 
+        <script type="text/javascript" src="http://maps.google.com/maps/api/js?libraries=geometry&sensor=false&language=en"></script>
+
+
+        <script id="shader-vs" type="x-shader/x-vertex">
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+
+            varying vec2 vTextureCoord;
+
+            void main(void) {
+                gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vTextureCoord = aTextureCoord;
+            }
+        </script>
+
+        <script id="shader-fs" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+
+            uniform sampler2D uSampler0;
+
+            void main(void) {
+                gl_FragColor = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+            }
+        </script>
+
+
+        <script>
+            window.requestAnimFrame = (function(){
+                return  window.requestAnimationFrame       || 
+                window.webkitRequestAnimationFrame || 
+                window.mozRequestAnimationFrame    || 
+                window.oRequestAnimationFrame      || 
+                window.msRequestAnimationFrame     || 
+                function( callback ){
+                window.setTimeout(callback, 1000 / 60);
+                };
+            })();
+
+            function parseQueryString(aPath) {
+
+                var TL = [24.209394675097073, 120.673828125];
+                var BR = [23.50103316052575, 121.453857421875]
+
+                var queryString = aPath;
+                var queryIndex = queryString.indexOf("?");
+                var queryStringArray = [];
+                
+                if(queryIndex !== -1 && queryIndex+1 !== queryString.length) {
+                    queryString = queryString.substring(queryIndex+1, queryString.length);
+                    queryStringArray = queryString.split("&");
+                }
+                var returnObject = {};
+                for(var i = 0; i < queryStringArray.length; i++) {
+                    var tempArray = queryStringArray[i].split("=");
+                    returnObject[tempArray[0]] = tempArray[1];
+                }
+                return returnObject;
+            };
+
+            
+            var queries = parseQueryString(window.location.href);
+
+            google.maps.Map.prototype.markers = new Array();
+            google.maps.Map.prototype.getMarkers = function() {
+                return this.markers
+            };
+            google.maps.Map.prototype.clearMarkers = function() {
+                for(var i=0; i<this.markers.length; i++){
+                    this.markers[i].setMap(null);
+                }
+                this.markers = new Array();
+            };
+            google.maps.Marker.prototype._setMap = google.maps.Marker.prototype.setMap;
+            google.maps.Marker.prototype.setMap = function(map) {
+                if (map) {
+                    map.markers[map.markers.length] = this;
+                }
+                this._setMap(map);
+            }
+
+            var texture, canvasGL, gl, stats;
+
+
+            function init() {
+                console.log( "INIT" );
+
+                canvasGL = document.createElement("canvas");
+                canvasGL.id = "canvasGL";
+                canvasGL.width = window.innerWidth/2;
+                canvasGL.height = window.innerHeight;
+                canvasGL.style.position = "absolute";
+                canvasGL.style.zIndex = "0";
+                canvasGL.style.left = window.innerWidth/2 + "px";
+
+                gl = canvasGL.getContext("experimental-webgl");
+                gl.viewportWidth = window.innerWidth/2;
+                gl.viewportHeight = window.innerHeight;
+                document.body.appendChild(canvasGL);
+
+                stats = new Stats();
+                stats.domElement.style.position = 'absolute';
+                stats.domElement.style.top = '0px';
+                document.body.appendChild( stats.domElement );
+
+                var styles = [
+                  {
+                    "stylers": [
+                      { "saturation": -100 },
+                      { "lightness": 1 }
+                    ]
+                  },{
+                    "featureType": "poi",
+                    "stylers": [
+                      { "visibility": "off" }
+                    ]
+                  },{
+                    "featureType": "administrative",
+                    "stylers": [
+                      { "visibility": "off" }
+                    ]
+                  },{
+                    "featureType": "landscape",
+                    "stylers": [
+                      { "visibility": "off" }
+                    ]
+                  },{
+                    "featureType": "road.local",
+                    "stylers": [
+                      { "visibility": "simplified" }
+                    ]
+                  },{
+                    "featureType": "road.arterial",
+                    "stylers": [
+                      { "visibility": "simplified" }
+                    ]
+                  },{
+                    "featureType": "transit.station",
+                    "stylers": [
+                      { "weight": 5.1 }
+                    ]
+                  },{
+                    "featureType": "transit.station",
+                    "stylers": [
+                      { "gamma": 0.01 }
+                    ]
+                  },{
+                  }
+                ]
+
+                var latlng = new google.maps.LatLng(24.209394675097073, 120.673828125);
+
+                var styledMap = new google.maps.StyledMapType(styles,   {name: "Styled Map"});  
+
+                var myOptions = {
+                    zoom: 9,   
+                    center: latlng,
+                    mapTypeControlOptions: {
+                        mapTypeIds: [google.maps.MapTypeId.ROADMAP, 'map_style']
+                    }
+                };
+
+                map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+                map.mapTypes.set('map_style', styledMap);
+                map.setMapTypeId('map_style');
+
+                google.maps.event.addListener(map, 'click', function(event) {
+                    placeMarker(event.latLng);
+                });
+
+                var img = new Image();
+                img.onload = function(e) {
+                    texture = new GLTexture(gl, img);
+                    console.log( "Image Loaded : " + texture );
+                }
+                img.src = "images/bg.jpg";
+
+            }
+
+
+            function placeMarker(location) {
+                console.log( location.lat() + "/" + location.lng() );
+                var marker = new google.maps.Marker({
+                    position: location,
+                    map: map
+                });
+
+
+                if(window.p0 == undefined) {
+                    window.p0 = [location.lat(), location.lng()];
+                } else {
+                    window.p1 = [location.lat(), location.lng()];
+                    drawDepthMap(); 
+                }
+            }
+
+            var model, shader, projection, camera;
+
+            function drawDepthMap() {
+                console.log( "Draw Depth Map" );
+                var num = 6;
+                var sx = p0[0], sy = p0[1];
+                var dx = (p1[0] - sx) / num;
+                var dy = (p1[1] - sy) / num;
+                var x, y;
+                var str = "http://maps.googleapis.com/maps/api/elevation/json?sensor=false&locations="
+                for ( var j=0; j<num; j++) {
+                    for ( var i=0; i<num; i++) {
+                        x = sx + dx*i;
+                        y = sy + dy*j;
+                        str += (x+","+y+"|");
+                    }
+                }
+
+                str = str.substring(0, str.length-1);
+
+                console.log( "Query : " + str );
+                http = new XMLHttpRequest();
+                http.open("GET", str, false);
+                http.send();
+                var data = eval("("+http.responseText+")");
+
+                console.log( data.results.length );
+
+                var size = 40;
+                // var canvas = document.createElement("canvas");
+                // canvas.id = "depthCanvas";
+                // document.body.appendChild(canvas);
+                // canvas.width = size * num;
+                // canvas.height = size * num;
+                // canvas.style.position = "absolute";
+                // canvas.style.left = window.innerWidth * .5 + "px";
+                // var ctx = canvas.getContext("2d");
+
+                model = new bongiovi.GLModel(gl, data.results.length*4);
+                var offset = size*num/2;
+
+                for ( var j=0; j<num; j++) {
+                    for ( var i=0; i<num; i++) {
+                        var index = i + j * num;
+                        var pp = data.results[index];
+
+                        this.model.updateVertex(index*4,    j*size-size-offset, i*size-size-offset, pp.elevation/10); 
+                        this.model.updateVertex(index*4+1,  j*size-offset, i*size-size-offset, pp.elevation/10); 
+                        this.model.updateVertex(index*4+2,  j*size-offset, i*size-offset, pp.elevation/10); 
+                        this.model.updateVertex(index*4+3,  j*size-size-offset, i*size-offset, pp.elevation/10);
+
+                        this.model.updateTextCoord(index*4,   0, 0);
+                        this.model.updateTextCoord(index*4+1, 1, 0);
+                        this.model.updateTextCoord(index*4+2, 1, 1);
+                        this.model.updateTextCoord(index*4+3, 0, 1); 
+                    }
+                }
+
+                shader = new bongiovi.GLModelShader(this.gl, "shader-vs", "shader-fs");
+                model.setTexture(0, texture);
+                model.generateBuffer();
+
+                var W = canvasGL.width;
+                var H = canvasGL.height;
+                projection = new bongiovi.ProjectionPerspectiveMatrix();
+                projection.perspective(45, W/H, .1, 10000);
+                camera = new bongiovi.HoverCamera().init(2000);
+
+                // for ( var j=0; j<num; j++) {
+                //     for ( var i=0; i<num; i++) {
+                //         var index = i + j * num;
+                //         var pp = data.results[index];
+                //         var el = pp.elevation;
+                //         ctx.fillStyle = "rgba("+el+","+el+","+el+",1)";
+                //         ctx.fillRect(i*size, j*size, size, size);
+
+                //         var ll = new google.maps.LatLng(pp.location.lat, pp.location.lng);
+                //         var marker = new google.maps.Marker({
+                //             position: ll,
+                //             map: map
+                //         });
+                //     }
+                // }
+
+                loop();
+            };
+
+
+            function loop() {
+                requestAnimFrame(loop);
+                render();
+                that.stats.update();
+            }
+
+
+            function render() {
+                gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+                gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+                gl.enable(gl.BLEND);
+                gl.enable(gl.DEPTH_TEST);
+
+                var matrix = camera.update();
+                var invert = mat4.create(matrix);
+                mat4.inverse(invert)
+
+                var invertCamera = mat4.toInverseMat3(invert);
+                gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+                // shader.setParameter("brightness", "uniform1f", mouse.x/window.innerWidth * .5);
+                // shader.setParameter("invertCamera", "uniformMatrix3fv", invertCamera);
+
+                model.render(shader, matrix, projection.matrix);
+            }
+        </script>
+    
+    </head>
+        
+
+    <body onload="init()">
+        <div id="map_canvas" style="width:50%; height:100%; z-index:1; position:absolute;"></div>
+    </body>
+</html>
