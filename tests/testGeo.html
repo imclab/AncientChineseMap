@@ -216,60 +216,68 @@
                     window.p0 = [location.lat(), location.lng()];
                 } else {
                     window.p1 = [location.lat(), location.lng()];
-                    drawDepthMap(); 
+                    getDepthMap(); 
                 }
             }
 
-            var model, shader, projection, camera;
 
-            function drawDepthMap() {
+            function getDepthMap() {
                 console.log( "Draw Depth Map" );
-                var num = 6;
+                var num = 10;
                 var sx = p0[0], sy = p0[1];
                 var dx = (p1[0] - sx) / num;
                 var dy = (p1[1] - sy) / num;
                 var x, y;
-                var str = "http://maps.googleapis.com/maps/api/elevation/json?sensor=false&locations="
+                var queries = [];
+                var coords = [];
                 for ( var j=0; j<num; j++) {
+                    coords[j] = [];
+                    var query = "http://maps.googleapis.com/maps/api/elevation/json?sensor=false&locations=";
                     for ( var i=0; i<num; i++) {
                         x = sx + dx*i;
                         y = sy + dy*j;
-                        str += (x+","+y+"|");
+                        query += (x+","+y+"|");
+                    }
+                    query = query.substring(0, query.length-1);
+
+                    var http = new XMLHttpRequest();
+                    http.open("GET", query, false);
+                    http.send();
+                    var data = eval("("+http.responseText+")");
+
+                    var o = {q:query, j:j, data:data.results};
+                    queries.push(o);
+
+                    for ( var i=0; i<data.results.length; i++) {
+                        coords[j][i] = data.results[i].elevation;
                     }
                 }
 
-                str = str.substring(0, str.length-1);
+                drawDepthMap(queries, coords);
+            };
 
-                console.log( "Query : " + str );
-                http = new XMLHttpRequest();
-                http.open("GET", str, false);
-                http.send();
-                var data = eval("("+http.responseText+")");
+            var model, shader, projection, camera;
 
-                console.log( data.results.length );
-
+            function drawDepthMap(queries, coords) {
                 var size = 40;
-                // var canvas = document.createElement("canvas");
-                // canvas.id = "depthCanvas";
-                // document.body.appendChild(canvas);
-                // canvas.width = size * num;
-                // canvas.height = size * num;
-                // canvas.style.position = "absolute";
-                // canvas.style.left = window.innerWidth * .5 + "px";
-                // var ctx = canvas.getContext("2d");
+                var offset = 200;
+                model = new bongiovi.GLModel(gl, 81*4);
 
-                model = new bongiovi.GLModel(gl, data.results.length*4);
-                var offset = size*num/2;
+                for ( var i=0; i<queries.length-1; i++) {
+                    var data = queries[i].data;
+                    for ( var j=0; j< data.length-1; j++) {
+                        var index = i*9 + j;
+                        var pp = data[j];
 
-                for ( var j=0; j<num; j++) {
-                    for ( var i=0; i<num; i++) {
-                        var index = i + j * num;
-                        var pp = data.results[index];
+                        var tx = queries[i].j;
+                        var ty = j;
 
-                        this.model.updateVertex(index*4,    j*size-size-offset, i*size-size-offset, pp.elevation/10); 
-                        this.model.updateVertex(index*4+1,  j*size-offset, i*size-size-offset, pp.elevation/10); 
-                        this.model.updateVertex(index*4+2,  j*size-offset, i*size-offset, pp.elevation/10); 
-                        this.model.updateVertex(index*4+3,  j*size-size-offset, i*size-offset, pp.elevation/10);
+                        console.log( tx + "/" + ty + " : " + index );
+
+                        this.model.updateVertex(index*4,    tx*size-size-offset, ty*size-size-offset, -coords[i][j]/10); 
+                        this.model.updateVertex(index*4+1,  tx*size-offset, ty*size-size-offset, -coords[i+1][j]/10); 
+                        this.model.updateVertex(index*4+2,  tx*size-offset, ty*size-offset, -coords[i+1][j+1]/10); 
+                        this.model.updateVertex(index*4+3,  tx*size-size-offset, ty*size-offset, -coords[i][j+1]/10);
 
                         this.model.updateTextCoord(index*4,   0, 0);
                         this.model.updateTextCoord(index*4+1, 1, 0);
@@ -288,30 +296,14 @@
                 projection.perspective(45, W/H, .1, 10000);
                 camera = new bongiovi.HoverCamera().init(2000);
 
-                // for ( var j=0; j<num; j++) {
-                //     for ( var i=0; i<num; i++) {
-                //         var index = i + j * num;
-                //         var pp = data.results[index];
-                //         var el = pp.elevation;
-                //         ctx.fillStyle = "rgba("+el+","+el+","+el+",1)";
-                //         ctx.fillRect(i*size, j*size, size, size);
-
-                //         var ll = new google.maps.LatLng(pp.location.lat, pp.location.lng);
-                //         var marker = new google.maps.Marker({
-                //             position: ll,
-                //             map: map
-                //         });
-                //     }
-                // }
-
                 loop();
-            };
+            }
 
 
             function loop() {
                 requestAnimFrame(loop);
                 render();
-                that.stats.update();
+                // that.stats.update();
             }
 
 
@@ -327,9 +319,6 @@
 
                 var invertCamera = mat4.toInverseMat3(invert);
                 gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-
-                // shader.setParameter("brightness", "uniform1f", mouse.x/window.innerWidth * .5);
-                // shader.setParameter("invertCamera", "uniformMatrix3fv", invertCamera);
 
                 model.render(shader, matrix, projection.matrix);
             }
