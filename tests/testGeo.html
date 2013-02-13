@@ -188,7 +188,9 @@
 
                 map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
                 map.mapTypes.set('map_style', styledMap);
-                map.setMapTypeId('map_style');
+                map.setMapTypeId('map_style');   
+                
+                elevator = new google.maps.ElevationService();
 
                 google.maps.event.addListener(map, 'click', function(event) {
                     placeMarker(event.latLng);
@@ -210,7 +212,28 @@
                     position: location,
                     map: map
                 });
+                                 
+                var positionalRequest = {
+                    'locations': [location]
+                }               
+                
+                elevator.getElevationForLocations(positionalRequest, function(results, status) {
+                if (status == google.maps.ElevationStatus.OK) {
 
+                  // Retrieve the first result
+                  if (results[0]) {
+
+                    // Open an info window indicating the elevation at the clicked position
+                    console.log("The elevation at this point is " + results[0].elevation + " meters.");
+                    // infowindow.setPosition(clickedLocation);
+                    // infowindow.open(map);
+                  } else {
+                    alert("No results found");
+                  }
+                } else {
+                  alert("Elevation service failed due to: " + status);
+                }
+              });
 
                 if(window.p0 == undefined) {
                     window.p0 = [location.lat(), location.lng()];
