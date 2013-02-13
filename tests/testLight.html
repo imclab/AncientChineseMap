@@ -25,19 +25,28 @@
 
         <script id="shader-vs" type="x-shader/x-vertex">
             attribute vec3 aVertexPosition;
+            attribute vec3 aVertexNormal;
             attribute vec2 aTextureCoord;
-            attribute vec3 aNormal;
 
             uniform mat4 uMVMatrix;
             uniform mat4 uPMatrix;
+            uniform mat3 uNMatrix;
+
+            uniform vec3 uAmbientColor;
+
+            uniform vec3 uLightingDirection;
+            uniform vec3 uDirectionalColor;
 
             varying vec2 vTextureCoord;
-            varying vec3 vNormal;
+            varying vec3 vLightWeighting;
 
             void main(void) {
                 gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
                 vTextureCoord = aTextureCoord;
-                vNormal = aNormal;
+
+                vec3 transformedNormal = uNMatrix * aVertexNormal;
+                float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
+                vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
             }
         </script>
 
@@ -45,22 +54,14 @@
             precision mediump float;
 
             varying vec2 vTextureCoord;
+            varying vec3 vLightWeighting;
 
             uniform sampler2D uSampler0;
-            uniform float ambient;
-            uniform vec3 lightColor;
-            uniform vec3 lightPosition;
-            varying vec3 vNormal;
+
 
             void main(void) {
-                vec4 color = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
-                vec3 nrm = normalize(vNormal);
-                vec3 nrmLight = normalize(lightPosition);
-                float amount = dot(nrm, nrmLight);
-                color.rgb *= ambient;
-                vec3 lightAmount = lightColor * amount;
-                color.rgb += lightAmount;
-                gl_FragColor = color;
+                vec4 textureColor = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+                gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
             }
         </script>
 
@@ -81,7 +82,7 @@
                 console.log( "Init " );
                 img = new Image();
                 img.onload = function(e) {  _onImageLoaded();   }
-                img.src = "images/bg.jpg";
+                img.src = "images/whitebg.jpg";
             }
 
 
@@ -100,29 +101,108 @@
 
                 texture = new GLTexture(gl, img);
 
-                model = new bongiovi.GLModel(gl, 4);
+                model = new bongiovi.GLModel(gl, 24);
                 shader = new bongiovi.GLModelShader(this.gl, "shader-vs", "shader-fs");
-                shader.setParameter("ambient", "uniform1f", .2);
-                shader.setParameter("lightColor", "uniform3fv", [1, 0, 0]);
-                shader.setParameter("lightPosition", "uniform3fv", [1, 0, 1]);
+                shader.setParameter("uAmbientColor", "uniform3fv", [.2, .2, .2]);
+                shader.setParameter("uDirectionalColor", "uniform3fv", [1, 0, 0]);
+
+                // gl.uniformMatrix3fv(shaderProgram.nMatrixUniform, false, normalMatrix);
+
                 model.setTexture(0, texture);
-                this.model.setAttribute(0, "aNormal", 3);
+                model.setAttribute(0, "aVertexNormal", 3);
 
                 var size = 100;
-                model.updateVertex(0, -size, -size, 0);
-                model.updateVertex(1,  size, -size, 0);
-                model.updateVertex(2,  size,  size, 0);
-                model.updateVertex(3, -size,  size, 0);
+                model.updateVertex(0, -size, -size, size);
+                model.updateVertex(1,  size, -size, size);
+                model.updateVertex(2,  size,  size, size);
+                model.updateVertex(3, -size,  size, size);
+
+                model.updateVertex(4, -size, -size, -size);
+                model.updateVertex(5, -size,  size, -size);
+                model.updateVertex(6,  size,  size, -size);
+                model.updateVertex(7,  size, -size, -size);
+
+                model.updateVertex(8, -size,  size, -size);
+                model.updateVertex(9, -size,  size,  size);
+                model.updateVertex(10,  size,  size,  size);
+                model.updateVertex(11,  size,  size, -size);
+
+                model.updateVertex(12, -size, -size, -size);
+                model.updateVertex(13,  size, -size, -size);
+                model.updateVertex(14,  size, -size,  size);
+                model.updateVertex(15, -size, -size,  size);
+
+                model.updateVertex(16,  size, -size, -size);
+                model.updateVertex(17,  size,  size, -size);
+                model.updateVertex(18,  size,  size,  size);
+                model.updateVertex(19,  size, -size,  size);
+
+                model.updateVertex(20, -size, -size, -size);
+                model.updateVertex(21, -size, -size,  size);
+                model.updateVertex(22, -size,  size,  size);
+                model.updateVertex(23, -size,  size, -size);
+
 
                 model.updateTextCoord(0, 0, 0);
                 model.updateTextCoord(1, 1, 0);
                 model.updateTextCoord(2, 1, 1);
                 model.updateTextCoord(3, 0, 1);
 
+                model.updateTextCoord(4, 0, 0);
+                model.updateTextCoord(5, 1, 0);
+                model.updateTextCoord(6, 1, 1);
+                model.updateTextCoord(7, 0, 1);
+
+                model.updateTextCoord(8, 0, 0);
+                model.updateTextCoord(9, 1, 0);
+                model.updateTextCoord(10, 1, 1);
+                model.updateTextCoord(11, 0, 1);
+
+                model.updateTextCoord(12, 0, 0);
+                model.updateTextCoord(13, 1, 0);
+                model.updateTextCoord(14, 1, 1);
+                model.updateTextCoord(15, 0, 1);
+
+                model.updateTextCoord(16, 0, 0);
+                model.updateTextCoord(17, 1, 0);
+                model.updateTextCoord(18, 1, 1);
+                model.updateTextCoord(19, 0, 1);
+
+                model.updateTextCoord(20, 0, 0);
+                model.updateTextCoord(21, 1, 0);
+                model.updateTextCoord(22, 1, 1);
+                model.updateTextCoord(23, 0, 1);
+
+
                 this.model.updateAttribute(0, 0,   [0, 0, 1]);
                 this.model.updateAttribute(0, 1,   [0, 0, 1]);
                 this.model.updateAttribute(0, 2,   [0, 0, 1]);
                 this.model.updateAttribute(0, 3,   [0, 0, 1]);
+
+                this.model.updateAttribute(0, 4,   [0, 0, -1]);
+                this.model.updateAttribute(0, 5,   [0, 0, -1]);
+                this.model.updateAttribute(0, 6,   [0, 0, -1]);
+                this.model.updateAttribute(0, 7,   [0, 0, -1]);
+
+                this.model.updateAttribute(0, 8,   [0, 1, 0]);
+                this.model.updateAttribute(0, 9,   [0, 1, 0]);
+                this.model.updateAttribute(0, 10,   [0, 1, 0]);
+                this.model.updateAttribute(0, 11,   [0, 1, 0]);
+
+                this.model.updateAttribute(0, 12,   [0, -1, 0]);
+                this.model.updateAttribute(0, 13,   [0, -1, 0]);
+                this.model.updateAttribute(0, 14,   [0, -1, 0]);
+                this.model.updateAttribute(0, 15,   [0, -1, 0]);
+
+                this.model.updateAttribute(0, 16,   [1, 0, 0]);
+                this.model.updateAttribute(0, 17,   [1, 0, 0]);
+                this.model.updateAttribute(0, 18,   [1, 0, 0]);
+                this.model.updateAttribute(0, 19,   [1, 0, 0]);
+
+                this.model.updateAttribute(0, 20,   [-1, 0, 0]);
+                this.model.updateAttribute(0, 21,   [-1, 0, 0]);
+                this.model.updateAttribute(0, 22,   [-1, 0, 0]);
+                this.model.updateAttribute(0, 23,   [-1, 0, 0]);
 
                 model.generateBuffer();
 
@@ -149,6 +229,20 @@
                 gl.enable(gl.DEPTH_TEST);
 
                 gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+                var lightingDirection = [0, 0, -1];
+                var adjustedLD = vec3.create();
+                vec3.normalize(lightingDirection, adjustedLD);
+                vec3.scale(adjustedLD, -1);
+
+                var normalMatrix = mat3.create();
+                mat4.toInverseMat3(camera.update(), normalMatrix);
+                mat3.transpose(normalMatrix);
+                shader.setParameter("uNMatrix", "uniformMatrix3fv", normalMatrix);
+
+                shader.setParameter("uLightingDirection", "uniform3fv", adjustedLD);
+
+
                 model.render(shader, camera.update(), projection.matrix);
             }
         </script>

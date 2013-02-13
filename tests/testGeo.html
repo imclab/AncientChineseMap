@@ -190,6 +190,8 @@
                 map.mapTypes.set('map_style', styledMap);
                 map.setMapTypeId('map_style');
 
+                elevator = new google.maps.ElevationService();
+
                 google.maps.event.addListener(map, 'click', function(event) {
                     placeMarker(event.latLng);
                 });
@@ -199,13 +201,12 @@
                     texture = new GLTexture(gl, img);
                     console.log( "Image Loaded : " + texture );
                 }
-                img.src = "images/bg.jpg";
+                img.src = "images/whitebg.jpg";
 
             }
 
 
             function placeMarker(location) {
-                console.log( location.lat() + "/" + location.lng() );
                 var marker = new google.maps.Marker({
                     position: location,
                     map: map
@@ -217,67 +218,83 @@
                 } else {
                     window.p1 = [location.lat(), location.lng()];
                     getDepthMap(); 
+
+                    window.p0 = undefined;
+                    window.p1 = undefined;
                 }
             }
 
 
             function getDepthMap() {
                 console.log( "Draw Depth Map" );
-                var num = 10;
+                num = 10;
                 var sx = p0[0], sy = p0[1];
                 var dx = (p1[0] - sx) / num;
                 var dy = (p1[1] - sy) / num;
                 var x, y;
                 var queries = [];
                 var coords = [];
+                var locations = [];
                 for ( var j=0; j<num; j++) {
                     coords[j] = [];
-                    var query = "http://maps.googleapis.com/maps/api/elevation/json?sensor=false&locations=";
+                    var query = "http://maps.googleapis.com/maps/api/elevation/json?sensor=false&alt=json-in-script&locations=";
                     for ( var i=0; i<num; i++) {
                         x = sx + dx*i;
                         y = sy + dy*j;
                         query += (x+","+y+"|");
+
+                        var ll = new google.maps.LatLng(x, y);
+                        locations.push(ll);
                     }
                     query = query.substring(0, query.length-1);
 
-                    var http = new XMLHttpRequest();
-                    http.open("GET", query, false);
-                    http.send();
-                    var data = eval("("+http.responseText+")");
-
-                    var o = {q:query, j:j, data:data.results};
+                    var o = {q:query, j:j, data:null};
                     queries.push(o);
-
-                    for ( var i=0; i<data.results.length; i++) {
-                        coords[j][i] = data.results[i].elevation;
-                    }
                 }
 
-                drawDepthMap(queries, coords);
+                var positionalRequest = {   'locations': locations  };
+
+                elevator.getElevationForLocations(positionalRequest, function(results, status) {
+                    if (status == google.maps.ElevationStatus.OK) {
+
+                        for ( var i=0; i<results.length; i++) {
+                            var tx = i % num;
+                            var ty = Math.floor(i/num);
+                            console.log( tx + "/" + ty );
+                            coords[tx][ty] = results[i].elevation;
+                        }
+
+
+                        drawDepthMap(queries, coords);
+                    } else {
+                      alert("Elevation service failed due to: " + status);
+                    }
+                  });
+
+                
             };
 
             var model, shader, projection, camera;
 
             function drawDepthMap(queries, coords) {
                 var size = 40;
-                var offset = 200;
-                model = new bongiovi.GLModel(gl, 81*4);
+                var offset = (num-1)*size/2;
+                if(model == undefined) model = new bongiovi.GLModel(gl, (num-1)*(num-1)*4);
 
-                for ( var i=0; i<queries.length-1; i++) {
-                    var data = queries[i].data;
-                    for ( var j=0; j< data.length-1; j++) {
-                        var index = i*9 + j;
-                        var pp = data[j];
+                for ( var i=0; i<(num-1); i++) {
+                    for ( var j=0; j< (num-1); j++) {
+
+                        var index = i*(num-1) + j;
 
                         var tx = queries[i].j;
                         var ty = j;
 
-                        console.log( tx + "/" + ty + " : " + index );
+                        console.log( tx + "/" + ty + " : " + index + "   ::   " + coords[i][j] );
 
-                        this.model.updateVertex(index*4,    tx*size-size-offset, ty*size-size-offset, -coords[i][j]/10); 
-                        this.model.updateVertex(index*4+1,  tx*size-offset, ty*size-size-offset, -coords[i+1][j]/10); 
-                        this.model.updateVertex(index*4+2,  tx*size-offset, ty*size-offset, -coords[i+1][j+1]/10); 
-                        this.model.updateVertex(index*4+3,  tx*size-size-offset, ty*size-offset, -coords[i][j+1]/10);
+                        this.model.updateVertex(index*4,    tx*size-size-offset, -coords[i][j]/10,    ty*size-size-offset); 
+                        this.model.updateVertex(index*4+1,  tx*size-offset, -coords[i+1][j]/10,       ty*size-size-offset); 
+                        this.model.updateVertex(index*4+2,  tx*size-offset, -coords[i+1][j+1]/10,     ty*size-offset); 
+                        this.model.updateVertex(index*4+3,  tx*size-size-offset, -coords[i][j+1]/10,  ty*size-offset);
 
                         this.model.updateTextCoord(index*4,   0, 0);
                         this.model.updateTextCoord(index*4+1, 1, 0);
@@ -286,15 +303,18 @@
                     }
                 }
 
-                shader = new bongiovi.GLModelShader(this.gl, "shader-vs", "shader-fs");
+                if(shader == undefined) shader = new bongiovi.GLModelShader(this.gl, "shader-vs", "shader-fs");
                 model.setTexture(0, texture);
                 model.generateBuffer();
 
                 var W = canvasGL.width;
                 var H = canvasGL.height;
-                projection = new bongiovi.ProjectionPerspectiveMatrix();
-                projection.perspective(45, W/H, .1, 10000);
-                camera = new bongiovi.HoverCamera().init(2000);
+                if(projection == undefined) {
+                    projection = new bongiovi.ProjectionPerspectiveMatrix();
+                    projection.perspective(45, W/H, .1, 10000);
+                    camera = new bongiovi.HoverCamera().init(2000);   
+                }
+                
 
                 loop();
             }
