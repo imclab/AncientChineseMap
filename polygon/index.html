@@ -48,7 +48,9 @@
                 vTextureCoord = aTextureCoord;
 
                 vec3 transformedNormal = uNMatrix * aVertexNormal;
-                float directionalLightWeighting = max(dot(transformedNormal, uLightingDirection), 0.0);
+				// transformedNormal = normalize(transformedNormal);
+				
+                float directionalLightWeighting = max(dot(aVertexNormal, uLightingDirection), 0.0);
                 vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
             }
         </script>
@@ -86,11 +88,6 @@
                 gl.viewportWidth = window.innerWidth/2;
                 gl.viewportHeight = window.innerHeight;
                 document.body.appendChild(canvasGL);
-
-                stats = new Stats();
-                stats.domElement.style.position = 'absolute';
-                stats.domElement.style.top = '0px';
-                document.body.appendChild( stats.domElement );
 
                 var styles = [
                   {
