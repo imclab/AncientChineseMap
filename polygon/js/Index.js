@@ -45,7 +45,7 @@
 		this.model = new bongiovi.GLModel(this.gl, (NUM-1)*(NUM-1)*4);
 		this.shader = new bongiovi.GLModelShader(this.gl, "shader-vs", "shader-fs");
         this.shader.setParameter("uAmbientColor", "uniform3fv", [.2, .2, .2]);
-        this.shader.setParameter("uDirectionalColor", "uniform3fv", [1, 1, 1]);
+        this.shader.setParameter("uDirectionalColor", "uniform3fv", [1, .5, 0]);
 		this.model.setTexture(0, texture);
 		this.model.setAttribute(0, "aVertexNormal", 3);
         this.projection = new bongiovi.ProjectionPerspectiveMatrix();
