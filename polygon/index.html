@@ -9,6 +9,7 @@
           #status { color: #FF0000; position:fixed; top:15px; left:105px; z-index:200;}
         </style>
 		
+		<link rel="stylesheet" type="text/css" href="css/style.css" />
         <script type="text/javascript" src="js/libs/Stats.js"></script> 
         <script type="text/javascript" src="js/libs/webgl-utils.js"></script> 
         <script type="text/javascript" src="js/libs/glMatrix-0.9.5.min.js"></script> 
@@ -167,6 +168,12 @@
                 map.mapTypes.set('map_style', styledMap);
                 map.setMapTypeId('map_style');
 				
+                var imgBG = new Image();
+                imgBG.onload = function(e) {
+                    textureBG = new GLTexture(gl, imgBG);
+                }
+                imgBG.src = "images/bg.jpg";
+				
                 var img = new Image();
                 img.onload = function(e) {
                     texture = new GLTexture(gl, img);
@@ -180,7 +187,6 @@
                 gui = new dat.GUI();
 				polygon = new Index(map, gl).init();
 				
-                gui.add(polygon, 'size', 50, 100);
 				gui.addColor(polygon, 'ambientColor');
 				var f1 = gui.addFolder('Light0');
 				f1.add(polygon, 'light0X', -1.0, 1.0);
@@ -206,7 +212,7 @@
 				f3.addColor(polygon, 'lightColor2');
 				f3.open();
 				
-                gui.add(polygon, 'reset', 20, 100);
+				gui.add(polygon, 'apply');
 
 			}
         </script>
@@ -215,5 +221,8 @@
 
     <body onload="init()">
         <div id="map_canvas" style="width:50%; height:100%; z-index:1; position:absolute;"></div>
+        <div id="info">
+            Click to choose 2 locations on the map to see the terrain.
+        </div>
     </body>
 </html>

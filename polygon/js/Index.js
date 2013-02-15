@@ -2,15 +2,23 @@
 	var W, H, NUM;
 	W = window.innerWidth;
 	H = window.innerHeight*2;
-	NUM = 20;
+	NUM = 25;
 
 	Index = function(map, gl) {
 		if(map == undefined) return;
 		this.map = map;
 		this.gl = gl;
+		this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
+        this.gl.enable(this.gl.BLEND);
+        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+		
 		this.elevator = new google.maps.ElevationService();
-		this.useFakeData = true;
+		this.useFakeData = false;
 		this.size = 50;
+		this.tl = [];
+		this.br = [];
+		this.fillIndex = 0;
+		this.isReadyToRender = false;
 		
 		this.ambientColor = [30, 30, 30];
 		
@@ -68,6 +76,8 @@
         this.projection = new bongiovi.ProjectionPerspectiveMatrix();
         this.projection.perspective(45, W/H, .1, 10000);
         this.camera = new bongiovi.HoverCamera().init(2000);   
+		this.apply();
+		renderImage(this.gl, textureBG);
 	}
 	
 	
@@ -82,24 +92,69 @@
 			this.p1 = [ location.lat(), location.lng() ];
 			this.getDepthData();
 			this.p0 = undefined;
-			// this.p1 = undefined;
 		}
 	}
 	
 	
 	p.getDepthData = function() {
+		// this.useFakeData = true;
 		if(this.useFakeData) {
 			for ( var i=0; i<NUM; i++) {
 				for ( var j=0; j<NUM; j++) {
 					this.coords[i][j] = Math.random() * 1000;
 				}
 			}
+			console.log(this.coords);
 			this.drawDepthMap();
 		} else {
-			
+			this._getElevation();
 		}
 	}
 	
+	
+	p._getElevation = function() {
+		this.tl[0] = min(this.p0[0], this.p1[0]);
+		this.tl[1] = min(this.p0[1], this.p1[1]);
+		this.br[0] = max(this.p0[0], this.p1[0]);
+		this.br[1] = max(this.p0[1], this.p1[1]);
+		var diffX = (this.br[0] - this.tl[0]) / NUM;
+		var diffY = (this.br[1] - this.tl[1]) / NUM;
+		this.fillIndex = 0;
+		
+		for ( j=0; j<NUM; j++) {
+			var positions = [];
+			var sx = this.tl[0];
+			var sy = this.tl[1] + diffY * j;
+			for (i=0; i<NUM; i++) {
+				var tx = sx + diffX * i;
+				var ty = sy;
+				positions.push(new google.maps.LatLng(tx, ty) );
+			}
+			
+			var positionalRequest = {   'locations': positions  };
+			this.elevator.getElevationForLocations(positionalRequest, this._onGetElevationData);
+		}
+		
+		// var positionalRequest = {   'locations': locations  };
+	}
+	
+	p._onGetElevationData = function(results, status) {
+		polygon.fillElevations(results);
+	}
+	
+	p.fillElevations = function(results) {
+		for ( var i=0; i<NUM; i++) {
+			this.coords[this.fillIndex][i] = results[i].elevation;
+		}
+
+		this.fillIndex ++;
+		
+		if(this.fillIndex == NUM ) {
+			console.log(this.coords);
+			this.drawDepthMap();
+		}
+		
+	}
 	
 	p.drawDepthMap = function() {
 		var offset = (NUM-1)*this.size/2;
@@ -134,6 +189,7 @@
         }
 		
 		this.model.generateBuffer();
+		this.isReadyToRender = true;
 	}
 	
 	
@@ -144,15 +200,21 @@
 	
 	p.render = function() {
 		this.stats.update();
+		if(!this.isReadyToRender) return;
 		if(this.p1 == undefined) return;
-        this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
-        this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+        // this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
+        // this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
         this.gl.enable(this.gl.BLEND);
         this.gl.disable(this.gl.DEPTH_TEST);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-		renderImage(this.gl, texture);
+		renderImage(this.gl, textureBG);
 		this.gl.enable(this.gl.DEPTH_TEST);
 		
+        this.model.render(this.shader, this.camera.update(), this.projection.matrix);
+	}
+	
+	
+	p.apply = function() {
         var lightingDirection0 = [this.light0X, this.light0Y, this.light0Z];
         var adjustedLD0 = vec3.create();
         vec3.normalize(lightingDirection0, adjustedLD0);
@@ -169,11 +231,6 @@
         vec3.scale(adjustedLD2, -1);
 		
 		
-		var matrix = this.camera.update();
-        var normalMatrix = mat3.create();
-        mat4.toInverseMat3(matrix, normalMatrix);
-        mat3.transpose(normalMatrix);
-        this.shader.setParameter("uNMatrix", "uniformMatrix3fv", normalMatrix);
 		this.shader.setParameter("uAmbientColor", "uniform3fv", [this.ambientColor[0]/255, this.ambientColor[1]/255, this.ambientColor[2]/255] );
 		this.shader.setParameter("uLightingDirection0", "uniform3fv", adjustedLD0);
 		this.shader.setParameter("uDirectionalColor0", "uniform3fv", [this.lightColor0[0]/255, this.lightColor0[1]/255, this.lightColor0[2]/255] );
@@ -186,9 +243,6 @@
 		this.shader.setParameter("uLightingDirection2", "uniform3fv", adjustedLD2);
 		this.shader.setParameter("uDirectionalColor2", "uniform3fv", [this.lightColor2[0]/255, this.lightColor2[1]/255, this.lightColor2	[2]/255] );
 		this.shader.setParameter("lightWeight2", "uniform1f", this.lightWeight2 );
-			
-
-        this.model.render(this.shader, matrix, this.projection.matrix);
 	}
 	
 	
@@ -207,5 +261,9 @@
 		
 		return tmp;
 	}
+	
+	
+	var min = function(a, b) { 	return a > b ? b : a;	}
+	var max = function(a, b) { 	return a < b ? b : a;	}
 
 })();
