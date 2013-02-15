@@ -123,18 +123,7 @@
                 this.model.updateTextCoord(index*4+2, 1, 1);
                 this.model.updateTextCoord(index*4+3, 0, 1); 
 				
-				// var v01 = vec3.subtract(p0, p1);
-				// var v21 = vec3.subtract(p2, p1);
-				// var n0 = vec3.cross(v01, v21);
-				// vec3.normalize(n0);
-				
 				n0 = computeSurfaceNormal(p0, p1, p2);
-				
-				// var v03 = vec3.subtract(p0, p3);
-				// var v23 = vec3.subtract(p2, p3);
-				// var n1 = vec3.cross(v23, v03);
-				// vec3.normalize(n1);
-				
 				n1 = computeSurfaceNormal(p0, p2, p3);
 				
 				this.model.updateAttribute(0, index*4,     n0);
