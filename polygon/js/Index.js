@@ -12,10 +12,29 @@
 		this.useFakeData = true;
 		this.size = 50;
 		
-		//	LIGHT
-		this.lightX = 0.1;
-		this.lightY = 0.1;
-		this.lightZ = 0.1;
+		this.ambientColor = [30, 30, 30];
+		
+		//	LIGHT 0
+		this.light0X = 0.0;
+		this.light0Y = 1.0;
+		this.light0Z = 0.0;
+		this.lightColor0 = [255, 255, 255];
+		this.lightWeight0 = 0.66;
+		
+		//	LIGHT 1
+		this.light1X = 1.0;
+		this.light1Y = 0.0;
+		this.light1Z = 1.0;
+		this.lightColor1 = [200, 200, 255];
+		this.lightWeight1 = 0.5;
+		
+		//	LIGHT 2
+		this.light2X = -1.0;
+		this.light2Y = 0.0;
+		this.light2Z = -1.0;
+		this.lightColor2 = [255, 255, 200];
+		this.lightWeight2 = 0.5;
+						
 	}
 
 	var p = Index.prototype;
@@ -44,8 +63,6 @@
 		console.log("Initialize 3D");
 		this.model = new bongiovi.GLModel(this.gl, (NUM-1)*(NUM-1)*4);
 		this.shader = new bongiovi.GLModelShader(this.gl, "shader-vs", "shader-fs");
-        this.shader.setParameter("uAmbientColor", "uniform3fv", [.2, .2, .2]);
-        this.shader.setParameter("uDirectionalColor", "uniform3fv", [1, .5, 0]);
 		this.model.setTexture(0, texture);
 		this.model.setAttribute(0, "aVertexNormal", 3);
         this.projection = new bongiovi.ProjectionPerspectiveMatrix();
@@ -147,17 +164,40 @@
 		renderImage(this.gl, texture);
 		this.gl.enable(this.gl.DEPTH_TEST);
 		
-        var lightingDirection = [this.lightX, this.lightY, this.lightZ];
-        var adjustedLD = vec3.create();
-        vec3.normalize(lightingDirection, adjustedLD);
-        vec3.scale(adjustedLD, -1);
+        var lightingDirection0 = [this.light0X, this.light0Y, this.light0Z];
+        var adjustedLD0 = vec3.create();
+        vec3.normalize(lightingDirection0, adjustedLD0);
+        vec3.scale(adjustedLD0, -1);
 
+        var lightingDirection1 = [this.light1X, this.light1Y, this.light1Z];
+        var adjustedLD1 = vec3.create();
+        vec3.normalize(lightingDirection1, adjustedLD1);
+        vec3.scale(adjustedLD1, -1);
+		
+        var lightingDirection2 = [this.light2X, this.light2Y, this.light2Z];
+        var adjustedLD2 = vec3.create();
+        vec3.normalize(lightingDirection2, adjustedLD2);
+        vec3.scale(adjustedLD2, -1);
+		
+		
 		var matrix = this.camera.update();
         var normalMatrix = mat3.create();
         mat4.toInverseMat3(matrix, normalMatrix);
         mat3.transpose(normalMatrix);
         this.shader.setParameter("uNMatrix", "uniformMatrix3fv", normalMatrix);
-		this.shader.setParameter("uLightingDirection", "uniform3fv", adjustedLD);
+		this.shader.setParameter("uAmbientColor", "uniform3fv", [this.ambientColor[0]/255, this.ambientColor[1]/255, this.ambientColor[2]/255] );
+		this.shader.setParameter("uLightingDirection0", "uniform3fv", adjustedLD0);
+		this.shader.setParameter("uDirectionalColor0", "uniform3fv", [this.lightColor0[0]/255, this.lightColor0[1]/255, this.lightColor0[2]/255] );
+		this.shader.setParameter("lightWeight0", "uniform1f", this.lightWeight0 );
+
+		this.shader.setParameter("uLightingDirection1", "uniform3fv", adjustedLD1);
+		this.shader.setParameter("uDirectionalColor1", "uniform3fv", [this.lightColor1[0]/255, this.lightColor1[1]/255, this.lightColor1[2]/255] );
+		this.shader.setParameter("lightWeight1", "uniform1f", this.lightWeight1 );
+			
+		this.shader.setParameter("uLightingDirection2", "uniform3fv", adjustedLD2);
+		this.shader.setParameter("uDirectionalColor2", "uniform3fv", [this.lightColor2[0]/255, this.lightColor2[1]/255, this.lightColor2	[2]/255] );
+		this.shader.setParameter("lightWeight2", "uniform1f", this.lightWeight2 );
+			
 
         this.model.render(this.shader, matrix, this.projection.matrix);
 	}

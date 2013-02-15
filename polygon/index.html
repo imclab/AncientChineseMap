@@ -37,9 +37,18 @@
 
             uniform vec3 uAmbientColor;
 
-            uniform vec3 uLightingDirection;
-            uniform vec3 uDirectionalColor;
-
+            uniform vec3 uLightingDirection0;
+            uniform vec3 uDirectionalColor0;
+			uniform float lightWeight0;
+			
+            uniform vec3 uLightingDirection1;
+            uniform vec3 uDirectionalColor1;
+			uniform float lightWeight1;
+			
+            uniform vec3 uLightingDirection2;
+            uniform vec3 uDirectionalColor2;
+			uniform float lightWeight2;
+			
             varying vec2 vTextureCoord;
             varying vec3 vLightWeighting;
 
@@ -50,8 +59,16 @@
                 vec3 transformedNormal = uNMatrix * aVertexNormal;
 				// transformedNormal = normalize(transformedNormal);
 				
-                float directionalLightWeighting = max(dot(aVertexNormal, uLightingDirection), 0.0);
-                vLightWeighting = uAmbientColor + uDirectionalColor * directionalLightWeighting;
+                float directionalLightWeighting0 = max(dot(aVertexNormal, uLightingDirection0), 0.0);
+                vec3 vLightWeighting0 = (uAmbientColor + uDirectionalColor0 * directionalLightWeighting0) * lightWeight0;
+				
+                float directionalLightWeighting1 = max(dot(aVertexNormal, uLightingDirection1), 0.0);
+                vec3 vLightWeighting1 = (uAmbientColor + uDirectionalColor1 * directionalLightWeighting1) * lightWeight1;
+				
+                float directionalLightWeighting2 = max(dot(aVertexNormal, uLightingDirection2), 0.0);
+                vec3 vLightWeighting2 = (uAmbientColor + uDirectionalColor2 * directionalLightWeighting2) * lightWeight2;
+				
+				vLightWeighting = vLightWeighting0+vLightWeighting1+vLightWeighting2;
             }
         </script>
 
@@ -164,12 +181,30 @@
 				polygon = new Index(map, gl).init();
 				
                 gui.add(polygon, 'size', 50, 100);
-				
-				var f1 = gui.addFolder('Light');
-				f1.add(polygon, 'lightX', -1.0, 1.0);
-				f1.add(polygon, 'lightY', -1.0, 1.0);
-				f1.add(polygon, 'lightZ', -1.0, 1.0);
+				gui.addColor(polygon, 'ambientColor');
+				var f1 = gui.addFolder('Light0');
+				f1.add(polygon, 'light0X', -1.0, 1.0);
+				f1.add(polygon, 'light0Y', -1.0, 1.0);
+				f1.add(polygon, 'light0Z', -1.0, 1.0);
+				f1.add(polygon, 'lightWeight0', 0.0, 3.0);
+				f1.addColor(polygon, 'lightColor0');
 				f1.open();
+				
+				var f2 = gui.addFolder('Light1');
+				f2.add(polygon, 'light1X', -1.0, 1.0);
+				f2.add(polygon, 'light1Y', -1.0, 1.0);
+				f2.add(polygon, 'light1Z', -1.0, 1.0);
+				f2.add(polygon, 'lightWeight1', 0.0, 3.0);
+				f2.addColor(polygon, 'lightColor1');
+				f2.open();
+				
+				var f3 = gui.addFolder('Light2');
+				f3.add(polygon, 'light2X', -1.0, 1.0);
+				f3.add(polygon, 'light2Y', -1.0, 1.0);
+				f3.add(polygon, 'light2Z', -1.0, 1.0);
+				f3.add(polygon, 'lightWeight2', 0.0, 3.0);
+				f3.addColor(polygon, 'lightColor2');
+				f3.open();
 				
                 gui.add(polygon, 'reset', 20, 100);
 
