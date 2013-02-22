@@ -90,6 +90,7 @@
 		this.shaderProgram.mvMatrixUniform = this.gl.getUniformLocation(this.shaderProgram, "uMVMatrix");
 
 		for ( var i=0; i<textures.length; i++) {
+			// console.log( "uSampler" + i.toString() );
 			this.shaderProgram.samplerUniform = this.gl.getUniformLocation(this.shaderProgram, "uSampler" + i.toString());
 		}
 		

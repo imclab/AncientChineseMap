@@ -30,3 +30,10 @@ canvas {
 	text-align: center;
 	z-index:100;
 }
+
+#img_bertrand {
+	top : 75px;
+	left : 75px;
+	z-index: 100;
+	position: absolute;
+}

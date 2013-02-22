@@ -24,6 +24,9 @@
         <script type="text/javascript" src="js/bongiovi/GLTexture.js"></script> 
         <script type="text/javascript" src="js/bongiovi/GLTextureFilter.js"></script> 
         <script type="text/javascript" src="http://maps.google.com/maps/api/js?libraries=geometry&sensor=false&language=en"></script>
+        <script type="text/javascript" src="js/views/ViewMountain.js"></script>
+        <script type="text/javascript" src="js/views/ViewDepthMap.js"></script>
+        <script type="text/javascript" src="js/views/ViewFinal.js"></script>
         <script type="text/javascript" src="js/Index.js"></script>
 
 
@@ -87,7 +90,147 @@
                 gl_FragColor = vec4(textureColor.rgb * vLightWeighting, textureColor.a);
             }
         </script>
+
+        <script id="shader-fs-mix" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+
+            uniform sampler2D uSampler0;
+            uniform sampler2D uSampler1;
+            uniform sampler2D uSampler2;
+
+
+            void main(void) {
+                vec4 org = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+                vec4 blur = texture2D(uSampler1, vec2(vTextureCoord.s, vTextureCoord.t));
+                vec4 map = texture2D(uSampler2, vec2(vTextureCoord.s, vTextureCoord.t));
+                float offset = map.r;
+                // gl_FragColor = org * ( 1.0 - offset) + blur * offset;
+                gl_FragColor = blur;
+            }
+        </script>
+
+
+        <script id="shader-fs-depth-map" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec4 vPosition;
+
+            void main(void) {
+                float z  = vPosition.z/5000.0;
+                gl_FragColor = vec4(z, z, z, 1.0);
+            }
+        </script>
+
+
+
+        <script id="shader-vs-depth-map" type="x-shader/x-vertex">
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+
+            varying vec4 vPosition;
+
+            void main(void) {
+                vec2 coord = aTextureCoord;
+                vec4 pos = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                gl_Position = pos;
+                vPosition = pos;
+            }
+        </script>
         
+        <script id="shader-vs-otho" type="x-shader/x-vertex">
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+
+            varying vec2 vTextureCoord;
+
+            void main(void) {
+                gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vTextureCoord = aTextureCoord;
+            }
+        </script>
+
+        <script id="shader-fs-hblur" type="x-shader/x-fragment">
+            // for Test 03
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+
+            uniform sampler2D uSampler0;
+            uniform float h;
+
+            void main(void) {
+                vec4 sum = vec4( 0.0 );
+                vec2 vUv = vTextureCoord;
+                sum += texture2D( uSampler0, vec2( vUv.x - 4.0 * h, vUv.y ) ) * 0.05;
+                sum += texture2D( uSampler0, vec2( vUv.x - 3.0 * h, vUv.y ) ) * 0.09;
+                sum += texture2D( uSampler0, vec2( vUv.x - 2.0 * h, vUv.y ) ) * 0.12;
+                sum += texture2D( uSampler0, vec2( vUv.x - 1.0 * h, vUv.y ) ) * 0.15;
+                sum += texture2D( uSampler0, vec2( vUv.x,           vUv.y ) ) * 0.18;
+                sum += texture2D( uSampler0, vec2( vUv.x + 1.0 * h, vUv.y ) ) * 0.15;
+                sum += texture2D( uSampler0, vec2( vUv.x + 2.0 * h, vUv.y ) ) * 0.12;
+                sum += texture2D( uSampler0, vec2( vUv.x + 3.0 * h, vUv.y ) ) * 0.09;
+                sum += texture2D( uSampler0, vec2( vUv.x + 4.0 * h, vUv.y ) ) * 0.05;
+
+                gl_FragColor = sum;
+            }
+        </script>
+
+        <script id="shader-fs-vblur" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+
+            uniform sampler2D uSampler;
+            uniform float v;
+
+            void main(void) {
+                vec4 sum = vec4( 0.0 );
+                vec2 vUv = vTextureCoord;
+                sum += texture2D( uSampler, vec2( vUv.x, vUv.y - 4.0 * v ) ) * 0.05;
+                sum += texture2D( uSampler, vec2( vUv.x, vUv.y - 3.0 * v ) ) * 0.09;
+                sum += texture2D( uSampler, vec2( vUv.x, vUv.y - 2.0 * v ) ) * 0.12;
+                sum += texture2D( uSampler, vec2( vUv.x, vUv.y - 1.0 * v ) ) * 0.15;
+                sum += texture2D( uSampler, vec2( vUv.x, vUv.y           ) ) * 0.18;
+                sum += texture2D( uSampler, vec2( vUv.x, vUv.y + 1.0 * v ) ) * 0.15;
+                sum += texture2D( uSampler, vec2( vUv.x, vUv.y + 2.0 * v ) ) * 0.12;
+                sum += texture2D( uSampler, vec2( vUv.x, vUv.y + 3.0 * v ) ) * 0.09;
+                sum += texture2D( uSampler, vec2( vUv.x, vUv.y + 4.0 * v ) ) * 0.05;
+
+                gl_FragColor = sum;
+            }
+        </script>
+
+
+         <script id="shader-fs-edgeblur" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+
+            uniform sampler2D uSampler0;
+            uniform sampler2D uSampler1;
+
+            void main(void) {
+                vec4 colorOrg = texture2D(uSampler1, vTextureCoord);
+                vec4 colorBlur = texture2D(uSampler0, vTextureCoord);
+                vec2 center = vec2(.5, .5);
+                float maxLeng = length(center);
+                float leng = length(vTextureCoord - center);
+                float offset = 1.0 - leng / maxLeng;
+                offset = pow(offset, 3.0);
+                vec4 colorEdgeBlur = colorOrg * offset + colorBlur * (1.0-offset);
+                // colorEdgeBlur *= offset;
+
+                gl_FragColor = colorEdgeBlur;
+            }
+        </script>
 
 
         <script>
@@ -180,6 +323,12 @@
 					onLoaded();
                 }
                 img.src = "images/whitebg.jpg";
+
+
+                var imgBertrand = new Image();
+                imgBertrand.src = "images/bertrand.png";
+                imgBertrand.id = "img_bertrand";
+                document.body.appendChild(imgBertrand)
             }
 			
 			function onLoaded() {
@@ -187,33 +336,32 @@
                 gui = new dat.GUI();
 				polygon = new Index(map, gl).init();
 				
-				gui.addColor(polygon, 'ambientColor');
+				gui.addColor(polygon.viewMountain, 'ambientColor');
 				var f1 = gui.addFolder('Light0');
-				f1.add(polygon, 'light0X', -1.0, 1.0);
-				f1.add(polygon, 'light0Y', -1.0, 1.0);
-				f1.add(polygon, 'light0Z', -1.0, 1.0);
-				f1.add(polygon, 'lightWeight0', 0.0, 3.0);
-				f1.addColor(polygon, 'lightColor0');
+				f1.add(polygon.viewMountain, 'light0X', -1.0, 1.0);
+				f1.add(polygon.viewMountain, 'light0Y', -1.0, 1.0);
+				f1.add(polygon.viewMountain, 'light0Z', -1.0, 1.0);
+				f1.add(polygon.viewMountain, 'lightWeight0', 0.0, 3.0);
+				f1.addColor(polygon.viewMountain, 'lightColor0');
 				f1.open();
 				
 				var f2 = gui.addFolder('Light1');
-				f2.add(polygon, 'light1X', -1.0, 1.0);
-				f2.add(polygon, 'light1Y', -1.0, 1.0);
-				f2.add(polygon, 'light1Z', -1.0, 1.0);
-				f2.add(polygon, 'lightWeight1', 0.0, 3.0);
-				f2.addColor(polygon, 'lightColor1');
+				f2.add(polygon.viewMountain, 'light1X', -1.0, 1.0);
+				f2.add(polygon.viewMountain, 'light1Y', -1.0, 1.0);
+				f2.add(polygon.viewMountain, 'light1Z', -1.0, 1.0);
+				f2.add(polygon.viewMountain, 'lightWeight1', 0.0, 3.0);
+				f2.addColor(polygon.viewMountain, 'lightColor1');
 				f2.open();
 				
 				var f3 = gui.addFolder('Light2');
-				f3.add(polygon, 'light2X', -1.0, 1.0);
-				f3.add(polygon, 'light2Y', -1.0, 1.0);
-				f3.add(polygon, 'light2Z', -1.0, 1.0);
-				f3.add(polygon, 'lightWeight2', 0.0, 3.0);
-				f3.addColor(polygon, 'lightColor2');
+				f3.add(polygon.viewMountain, 'light2X', -1.0, 1.0);
+				f3.add(polygon.viewMountain, 'light2Y', -1.0, 1.0);
+				f3.add(polygon.viewMountain, 'light2Z', -1.0, 1.0);
+				f3.add(polygon.viewMountain, 'lightWeight2', 0.0, 3.0);
+				f3.addColor(polygon.viewMountain, 'lightColor2');
 				f3.open();
 				
-				gui.add(polygon, 'apply');
-
+				gui.add(polygon.viewMountain, 'apply');
 			}
         </script>
     </head>
