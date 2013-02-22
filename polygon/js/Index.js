@@ -7,7 +7,7 @@
 	Index = function(map, gl) {
 		if(map == undefined) return;
 
-		this.useFakeData = false;
+		this.useFakeData = true;
 
 		this.map = map;
 		this.gl = gl;
@@ -142,15 +142,26 @@
 		
 		if(!this.isReadyToRender) return;
 		if(this.p1 == undefined) return;
-        this.gl.enable(this.gl.BLEND);
-        this.gl.disable(this.gl.DEPTH_TEST);
-        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+		
+		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		this.gl.disable(this.gl.DEPTH_TEST);
 		renderImage(this.gl, textureBG);
-
-        var cam = this.camera.update();
-        this.viewMountain.render(cam, this.projection.matrix);
-        // this.viewDepth.render(cam, this.projection.matrix);
-        this.viewFinal.render(this.viewMountain.output);
+        this.gl.enable(this.gl.BLEND);
+		
+        
+		this.gl.enable(this.gl.DEPTH_TEST);
+        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+		
+		var cam = this.camera.update();
+		
+		this.viewMountain.render(cam, this.projection.matrix);
+		this.viewDepth.render(cam, this.projection.matrix);
+		
+		// console.log(this.viewMountain.output);
+		// renderImage(this.gl, this.viewMountain.output);
+		
+		this.viewFinal.render(this.viewMountain.output, this.viewDepth.output);
+        // this.viewFinal.render(this.viewMountain.output);
 	}
 	
 	var min = function(a, b) { 	return a > b ? b : a;	}

@@ -95,7 +95,6 @@
 
 
 	p.render = function(camera, projection) {
-		this.gl.enable(this.gl.DEPTH_TEST);
         this.model.render(this.shader, camera, projection, this.output);
 	}
 

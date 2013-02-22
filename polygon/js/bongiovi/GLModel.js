@@ -142,7 +142,7 @@ if(window.bongiovi === undefined ) window.bongiovi = {};
 			this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this._vertices), this.gl.STATIC_DRAW);
 			this.vBufferPos.itemSize = 3;
 			this.vBufferPos.numItems = this._numVertex;
-
+			
 			this.vBufferUV = this.gl.createBuffer();
 			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vBufferUV);
 			this.gl.bufferData(this.gl.ARRAY_BUFFER, new Float32Array(this._uvs), this.gl.STATIC_DRAW);
@@ -163,7 +163,7 @@ if(window.bongiovi === undefined ) window.bongiovi = {};
 			for ( var i=0; i<numQuad; i++) {
 				this._indices.push(0+i*4, 1+i*4, 2+i*4, 0+i*4, 2+i*4, 3+i*4);
 			}
-
+			
 			this.iBuffer = this.gl.createBuffer();
 			this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
 			this.gl.bufferData(this.gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(this._indices), this.gl.STATIC_DRAW);

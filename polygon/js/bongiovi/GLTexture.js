@@ -92,7 +92,9 @@
 
 
 	window.renderImage = function(gl, textureToRender) {
+		// console.log(vertexShader);
 		if(vertexShader == undefined) {
+
 			vertexShader = getShader(gl, vertexShaderSrc, "vertex");
 			fragmentShader = getShader(gl, fragmentShaderSrc, "fragment");
 
