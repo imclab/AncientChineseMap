@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Geolocation and elevation test</title>
+        <style type="text/css">
+          html { height: 100% background-color:#FFFFFF;}
+          body { height: 100%; margin: 0px; padding: 0px }
+          #map_canvas { height: 100% }
+          #status { color: #FF0000; position:fixed; top:15px; left:105px; z-index:200;}
+		  div { position:absolute; }
+		  .block { width:25px; height:25px; background-color:#70E8CB; border:1px solid #545454; color:#2D2D2F; text-align: center;}
+		  .blockContainer {	width:500px; height:500px; left:50%; height:50%; margin-left: -250px; margin-top: 250px;}
+        </style>
+
+        <script id="shader-vs" type="x-shader/x-vertex">
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+
+            varying vec2 vTextureCoord;
+
+            void main(void) {
+                gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vTextureCoord = aTextureCoord;
+            }
+        </script>
+
+        <script id="shader-fs" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+
+            uniform sampler2D uSampler0;
+
+            void main(void) {
+                gl_FragColor = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+            }
+        </script>
+		
+        <script type="text/javascript" src="../js/libs/Stats.js"></script> 
+        <script type="text/javascript" src="../js/libs/webgl-utils.js"></script> 
+        <script type="text/javascript" src="../js/libs/glMatrix-0.9.5.min.js"></script> 
+        <script type="text/javascript" src="../js/libs/webgl-debug.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/SimpleCamera.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/HoverCamera.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/ProjectionPerspectiveMatrix.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLModelShader.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLModel.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLTexture.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLTextureFilter.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/Scheduler.js"></script> 
+		
+		<script type="text/javascript" >
+		
+		var num = 20;
+		var size = 25;
+		var data = [];
+		var blocks = [];
+		var container;
+		var mountains = [];
+		scheduler = new Scheduler();
+		var efIndex;
+
+		function init() {
+			console.log("Init");
+
+			container = document.createElement("div");
+			document.body.appendChild(container);
+			container.className = "blockContainer";
+			
+			for ( var i=0; i<num; i++) {
+				data[i] = [];
+				blocks[i] = [];
+			}
+			
+			for ( var j=0; j<num; j++) {
+				for ( var i=0; i<num; i++) {
+					var b = createBlock();
+					b.style.top = j * size + "px";
+					b.style.left = i * size + "px";
+					var height = Math.floor(Math.random() * 100);
+					data[i][j] = height
+					blocks[i][j] = b
+					b.innerHTML = height.toString();
+				}
+			}
+
+			efIndex = scheduler.addEF(this, process);
+			// document.addEventListener("click", process);
+		}
+
+
+		function process() {
+			var top = 0;
+			var tx, ty;
+
+			for ( var j=0; j<num; j++) {
+				for ( var i=0; i<num; i++) {
+					if(data[i][j] > top) {
+						top = data[i][j];
+						tx = i;
+						ty = j;
+					}
+				}
+			}
+
+
+			if(top == 0) {
+				scheduler.removeEF(efIndex);
+				container.style.opacity = .7;
+				init3D();
+				return false;	//	ALL FINISHED
+			}
+
+			for ( j=ty-1; j<=ty+1; j++) {
+				for ( i=tx-1; i<=tx+1; i++) {
+					try {
+						blocks[i][j].style.backgroundColor = "#FFE9C7";
+						blocks[i][j].innerHTML = "-1";
+						data[i][j] = -1;
+					} catch(e) {
+						// console.log( "Block not exist : " + i + ":" + j );
+					}
+				}
+			}
+
+			blocks[tx][ty].style.backgroundColor = "#FF5B5B";
+			blocks[tx][ty].innerHTML = top.toString();
+
+			var o = {x:tx, y:ty, height:top};
+			mountains.push(o);
+			return true;
+		}
+
+
+
+		var texture;
+		var model, shader, projection, camera;
+
+
+		function init3D() {
+			canvasGL = document.createElement("canvas");
+            canvasGL.id = "canvasGL";
+            canvasGL.width = window.innerWidth;
+            canvasGL.height = window.innerHeight;
+            canvasGL.style.position = "absolute";
+            canvasGL.style.zIndex = "0";
+
+            gl = canvasGL.getContext("experimental-webgl");
+            gl.viewportWidth = window.innerWidth;
+            gl.viewportHeight = window.innerHeight;
+            document.body.appendChild(canvasGL);
+
+            stats = new Stats();
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.top = '0px';
+            document.body.appendChild( stats.domElement );
+
+            var img = new Image();
+            img.onload = function(e) {
+                texture = new GLTexture(gl, img);
+                console.log( "Image Loaded : " + texture );
+                create3DScene();
+            }
+            img.src = "images/whitebg.jpg";
+		}
+
+
+		function create3DScene() {
+			console.log( "Texture Ready, create 3D scene" );
+
+			if(model == undefined) model = new bongiovi.GLModel(gl, mountains.length * 4);
+
+			for ( var i=0; i<mountains.length; i++) {
+				var o = mountains[i];
+				var tx = (o.x - num/2) * 200;
+				var tz = -(o.y - num/2) * 200;
+				var ty = 2 * o.height;
+
+				this.model.updateVertex(i*4+0, tx-ty/2, 0, tz);
+				this.model.updateVertex(i*4+1, tx-ty/2, -ty, tz);
+				this.model.updateVertex(i*4+2, tx+ty/2, -ty, tz);
+				this.model.updateVertex(i*4+3, tx+ty/2, 0, tz);
+
+				this.model.updateTextCoord(i*4,   0, 0);
+                this.model.updateTextCoord(i*4+1, 1, 0);
+                this.model.updateTextCoord(i*4+2, 1, 1);
+                this.model.updateTextCoord(i*4+3, 0, 1); 
+			}
+
+
+			shader = new bongiovi.GLModelShader(this.gl, "shader-vs", "shader-fs");
+			model.setTexture(0, texture);
+			model.generateBuffer();
+			var W = canvasGL.width;
+            var H = canvasGL.height;
+            projection = new bongiovi.ProjectionPerspectiveMatrix();
+			projection.perspective(45, W/H, .1, 10000);
+            camera = new bongiovi.HoverCamera().init(2000);   
+
+            scheduler.addEF(this, loop, []);
+		}
+		
+
+		function loop() {
+			// console.log( "Loop" );
+			stats.update();
+
+			gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+	        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+	        gl.enable(gl.BLEND);
+	        gl.enable(gl.DEPTH_TEST);
+
+	        var matrix = camera.update();
+	        var invert = mat4.create(matrix);
+	        mat4.inverse(invert)
+
+	        var invertCamera = mat4.toInverseMat3(invert);
+	        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+	        model.render(shader, matrix, projection.matrix);
+		}
+		
+		function createBlock() {
+			var block = document.createElement("div");
+			block.className = "block";
+			container.appendChild(block);
+			return block;
+		}
+		</script>
+		
+    </head>
+        
+
+    <body onload="init()">
+    </body>
+</html>

@@ -7,13 +7,14 @@
 	Index = function(map, gl) {
 		if(map == undefined) return;
 
-		this.useFakeData = true;
+		this.useFakeData = false;
 
 		this.map = map;
 		this.gl = gl;
 		this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
         this.gl.enable(this.gl.BLEND);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
+        this.gl.enable(this.gl.CULL_FACE);
         this.ratio = 1;
         this.tl = [];
         this.br = [];
@@ -144,6 +145,7 @@
 		if(this.p1 == undefined) return;
 		
 		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		this.gl.enable(this.gl.CULL_FACE);
 		this.gl.disable(this.gl.DEPTH_TEST);
 		renderImage(this.gl, textureBG);
         this.gl.enable(this.gl.BLEND);
