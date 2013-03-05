@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Geolocation and elevation test</title>
+        <style type="text/css">
+          html { height: 100% background-color:#FFFFFF;}
+          body { height: 100%; margin: 0px; padding: 0px }
+          #map_canvas { height: 100% }
+          #status { color: #FF0000; position:fixed; top:15px; left:105px; z-index:200;}
+		  div { position:absolute; }
+		  .block { width:30px; height:30px; background-color:#70E8CB; border:1px solid #545454; color:#2D2D2F; text-align: center;}
+		  .blockContainer {	width:500px; height:500px; left:75%; height:50%; margin-left: -250px; margin-top: 250px;}
+        </style>
+
+        <script id="shader-vs" type="x-shader/x-vertex">
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+            uniform float yoffset;
+
+            varying vec2 vTextureCoord;
+
+            void main(void) {
+                gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vec2 texCoord = aTextureCoord;
+                texCoord.y += yoffset;
+                vTextureCoord = texCoord;
+            }
+        </script>
+
+        <script id="shader-vs-facefront" type="x-shader/x-vertex">
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+            attribute vec2 sizeOffset;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+            uniform mat3 invertCamera;
+
+            varying vec2 vTextureCoord;
+            varying vec3 vVertexCoord;
+            varying vec3 vOutputCoord;
+
+            void main(void) {
+                vec3 size = vec3(sizeOffset, 0.0);
+                vec3 adjustSize = size * invertCamera;
+                vec3 pos = aVertexPosition + adjustSize;
+                vec4 finalPos = uPMatrix * uMVMatrix * vec4(pos, 1.0);
+                gl_Position = finalPos;
+                vTextureCoord = aTextureCoord;
+                vVertexCoord = finalPos.xyz;
+            }
+        </script>
+
+        <script id="shader-fs" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+
+            uniform sampler2D uSampler0;
+
+            void main(void) {
+                gl_FragColor = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+            }
+        </script>
+		
+        <script type="text/javascript" src="../js/libs/Stats.js"></script> 
+        <script type="text/javascript" src="../js/libs/webgl-utils.js"></script> 
+        <script type="text/javascript" src="../js/libs/glMatrix-0.9.5.min.js"></script> 
+        <script type="text/javascript" src="../js/libs/webgl-debug.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/SimpleCamera.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/HoverCamera.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/ProjectionPerspectiveMatrix.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLModelShader.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLModel.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLTexture.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/GLTextureFilter.js"></script> 
+        <script type="text/javascript" src="../js/bongiovi/Scheduler.js"></script> 
+        <script type="text/javascript" src="http://maps.google.com/maps/api/js?libraries=geometry&sensor=false&language=en"></script>
+		
+		<script type="text/javascript" >
+
+
+        var scheduler = new Scheduler();
+        var canvasGL, gl, stats, texture;
+        var model, shader, mtx;
+        var mousey = window.innerHeight/2;
+
+		function init() {
+            console.log( "init" );
+
+            canvasGL = document.createElement("canvas");
+            canvasGL.id = "canvasGL";
+            canvasGL.width = window.innerWidth;
+            canvasGL.height = window.innerHeight;
+            canvasGL.style.position = "absolute";
+
+            gl = canvasGL.getContext("experimental-webgl");
+            gl.viewportWidth = window.innerWidth;
+            gl.viewportHeight = window.innerHeight;
+            document.body.appendChild(canvasGL);
+
+            stats = new Stats();
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.top = '0px';
+            document.body.appendChild( stats.domElement );
+
+            var img = new Image();
+            img.onload = function(e) {
+                texture = new GLTexture(gl, img);
+                create3DScene();
+            }
+            img.src = "images/giantBG.jpg";
+
+            document.addEventListener("mousemove", _onMouseMove, false);
+		}
+
+
+        function _onMouseMove(e) {
+            mousey = e.clientY;
+            // console.log( "Mouse Y : " + mousey );
+        }
+
+
+        function create3DScene() {
+            model = new bongiovi.GLModel(gl, 4);
+            model.updateVertex(0, -1, -1, 0);
+            model.updateVertex(1,  1, -1, 0);
+            model.updateVertex(2,  1,  1, 0);
+            model.updateVertex(3, -1,  1, 0);
+
+            model.updateTextCoord(0, 0, .25);
+            model.updateTextCoord(1, 1, .25);
+            model.updateTextCoord(2, 1, .75);
+            model.updateTextCoord(3, 0, .75); 
+
+            shader = new bongiovi.GLModelShader(gl, "shader-vs", "shader-fs");
+            model.setTexture(0, texture);
+            model.generateBuffer();
+
+            mtx = mat4.create();
+            mat4.identity(mtx);
+            scheduler.addEF(this, this.render, []);
+        }
+
+
+        function render() {
+            stats.update();
+
+            gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            gl.enable(gl.BLEND);
+            gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+
+            var yoffset = -(mousey / window.innerHeight - .5) * .5;
+            shader.setParameter("yoffset", "uniform1f", yoffset);
+
+            model.render(shader, mtx, mtx);
+        }
+		</script>
+		
+    </head>
+        
+
+    <body onload="init()">
+    	<div id="map_canvas" style="width:50%; height:100%; z-index:1; position:absolute;"></div>
+    </body>
+</html>
