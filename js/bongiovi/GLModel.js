@@ -68,9 +68,68 @@ if(window.bongiovi === undefined ) window.bongiovi = {};
 			}
 
 			var shaderProgram = shader.shaderProgram;
-			var gl = this.gl;
-			gl.useProgram(shaderProgram);
+			this.gl.useProgram(shaderProgram);
 
+			this.attachAttributes(shaderProgram);
+			this.setupUniforms(shader, shaderProgram, mvMatrix, pMatrix);
+			this.bindBuffers(shaderProgram);
+			this.bindTextures(shaderProgram);
+
+			this.gl.bindBuffer(this.gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
+			this.gl.drawElements(this.gl.TRIANGLES, this.iBuffer.numItems, this.gl.UNSIGNED_SHORT, 0);	
+
+			if(output != undefined) {
+				this.gl.bindTexture(this.gl.TEXTURE_2D, output.texture);
+		        this.gl.generateMipmap(this.gl.TEXTURE_2D);
+		        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
+
+		        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+			}
+		}
+
+
+		p.bindTextures = function(shaderProgram) {
+			for ( var i=0 ; i<this._textures.length; i++) {
+				this.gl.activeTexture(this.gl["TEXTURE"+i.toString()]);
+				this.gl.bindTexture(this.gl.TEXTURE_2D, this._textures[i].texture);
+				this.gl.uniform1i(shaderProgram.samplerUniform, i);
+			} 
+		}
+
+
+		p.bindBuffers = function(shaderProgram) {
+			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vBufferPos);
+			this.gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, this.vBufferPos.itemSize, this.gl.FLOAT, false, 0, 0);
+
+			this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.vBufferUV);
+			this.gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, this.vBufferUV.itemSize, this.gl.FLOAT, false, 0, 0);
+
+			for( var i=0; i<this._attributes.length; i++) {
+				this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this._attributes[i].buffer);
+				this.gl.vertexAttribPointer(shaderProgram[this._attributes[i].name], this._attributes[i].size, this.gl.FLOAT, false, 0, 0);
+			}
+		}
+
+
+		p.setupUniforms = function(shader, shaderProgram, mvMatrix, pMatrix) {
+			for ( var i=0; i<this._textures.length; i++) {
+				shaderProgram.samplerUniform = this.gl.getUniformLocation(shaderProgram, "uSampler" + i.toString());
+			}
+
+			for ( var i=0; i<shader.parameters.length; i++) {
+				var o = shader.parameters[i];
+				if(o.type.indexOf("Matrix") == -1) this.gl[o.type](shaderProgram[o.name], o.value);
+				else {
+					this.gl.uniformMatrix3fv(shaderProgram[o.name], false, o.value);
+				}
+			}
+
+			this.gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
+			this.gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix );
+		}
+
+
+		p.attachAttributes = function(shaderProgram) {
 			shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
 			gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
 
@@ -86,51 +145,6 @@ if(window.bongiovi === undefined ) window.bongiovi = {};
 			shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uPMatrix");
 			shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uMVMatrix");
 			shaderProgram.samplerUniform = gl.getUniformLocation(shaderProgram, "uSampler");
-
-
-			for ( var i=0; i<this._textures.length; i++) {
-				shaderProgram.samplerUniform = this.gl.getUniformLocation(shaderProgram, "uSampler" + i.toString());
-			}
-
-			for ( var i=0; i<shader.parameters.length; i++) {
-				var o = shader.parameters[i];
-				if(o.type.indexOf("Matrix") == -1) this.gl[o.type](shaderProgram[o.name], o.value);
-				else {
-					this.gl.uniformMatrix3fv(shaderProgram[o.name], false, o.value);
-				}
-			}
-
-		    gl.bindBuffer(gl.ARRAY_BUFFER, this.vBufferPos);
-			gl.vertexAttribPointer(shaderProgram.vertexPositionAttribute, this.vBufferPos.itemSize, gl.FLOAT, false, 0, 0);
-
-			gl.bindBuffer(gl.ARRAY_BUFFER, this.vBufferUV);
-			gl.vertexAttribPointer(shaderProgram.textureCoordAttribute, this.vBufferUV.itemSize, gl.FLOAT, false, 0, 0);
-
-			for( var i=0; i<this._attributes.length; i++) {
-				gl.bindBuffer(gl.ARRAY_BUFFER, this._attributes[i].buffer);
-				gl.vertexAttribPointer(shaderProgram[this._attributes[i].name], this._attributes[i].size, gl.FLOAT, false, 0, 0);
-			}
-
-
-			for ( var i=0 ; i<this._textures.length; i++) {
-				this.gl.activeTexture(this.gl["TEXTURE"+i.toString()]);
-				this.gl.bindTexture(this.gl.TEXTURE_2D, this._textures[i].texture);
-				this.gl.uniform1i(shaderProgram.samplerUniform, i);
-			}
-
-			gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, this.iBuffer);
-
-			gl.uniformMatrix4fv(shaderProgram.pMatrixUniform, false, pMatrix);
-			gl.uniformMatrix4fv(shaderProgram.mvMatrixUniform, false, mvMatrix );
-			gl.drawElements(gl.TRIANGLES, this.iBuffer.numItems, gl.UNSIGNED_SHORT, 0);	
-
-			if(output != undefined) {
-				this.gl.bindTexture(this.gl.TEXTURE_2D, output.texture);
-		        this.gl.generateMipmap(this.gl.TEXTURE_2D);
-		        this.gl.bindTexture(this.gl.TEXTURE_2D, null);
-
-		        this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
-			}
 		}
 
 

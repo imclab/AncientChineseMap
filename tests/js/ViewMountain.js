@@ -26,14 +26,14 @@
 			var o = this.mountains[i];
 			var tx = (o.y - num/2) * range;
 			var tz = -(o.x - num/2) * range;
-
 			var ty = o.height * .1;
 
-			this.model.updateVertex(i*4+1, tx, 0, tz);
-			this.model.updateVertex(i*4+2, tx, 0, tz);
-			this.model.updateVertex(i*4+3, tx, 0, tz);
-			this.model.updateVertex(i*4+0, tx, 0, tz);
+			var yoffset = 200;
 
+			this.model.updateVertex(i*4+1, tx, yoffset, tz);
+			this.model.updateVertex(i*4+2, tx, yoffset, tz);
+			this.model.updateVertex(i*4+3, tx, yoffset, tz);
+			this.model.updateVertex(i*4+0, tx, yoffset, tz);
             
             this.model.updateAttribute(0, i*4+0, [-ty/2,  0]);
             this.model.updateAttribute(0, i*4+1, [ ty/2,  0]);
@@ -43,7 +43,7 @@
             var xoff = 0;
             var yoff = 0;
             if ( o.type == 1) yoff = .5;
-            // else if ( o.type == 2) xoff = .5;
+            else if ( o.type == 2) xoff = yoff = .5;
 			this.model.updateTextCoord(i*4,   0+xoff, 0+yoff);
             this.model.updateTextCoord(i*4+1, .5+xoff, 0+yoff);
             this.model.updateTextCoord(i*4+2, .5+xoff, .5+yoff);

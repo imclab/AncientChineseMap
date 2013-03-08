@@ -16,12 +16,14 @@
 		mat4.identity(this.matrix);
 
 		this.model = new bongiovi.GLModel(gl, 4);
-		var size = .3;
+		var size = .37;
 		var ratio = H/W;
-        this.model.updateVertex(0, -size*ratio,  0, 0.5);
-        this.model.updateVertex(1,  size*ratio,  0, 0.5);
-        this.model.updateVertex(2,  size*ratio,  size*2, 0.5);
-        this.model.updateVertex(3, -size*ratio,  size*2, 0.5);
+		var yoffset = -.35;
+
+        this.model.updateVertex(0, -size*ratio,  yoffset, 0.5);
+        this.model.updateVertex(1,  size*ratio,  yoffset, 0.5);
+        this.model.updateVertex(2,  size*ratio,  size*2+yoffset, 0.5);
+        this.model.updateVertex(3, -size*ratio,  size*2+yoffset, 0.5);
 
         this.model.updateTextCoord(0, 0, 0);
         this.model.updateTextCoord(1, 1, 0);

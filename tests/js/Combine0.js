@@ -15,7 +15,8 @@
 		this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
 		this.gl.enable(this.gl.BLEND);
 		this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
-		this.gl.enable(gl.CULL_FACE);
+		this.gl.enable(this.gl.DEPTH_TEST);
+		this.gl.enable(this.gl.CULL_FACE);
 
 		this.projection = new bongiovi.ProjectionPerspectiveMatrix();
         this.projection.perspective(45, W/H, .1, 10000);
@@ -36,17 +37,23 @@
 
 
 	p.render = function() {
-		// this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 
 		var matrix = this.camera.update();
         var invert = mat4.create(matrix);
         mat4.inverse(invert)
         var invertCamera = mat4.toInverseMat3(invert);
 
-		this.viewBG.render(this.camera.y / 2000 * .25);
-		this.viewSun.render(this.camera.y / 2000 * .25);
+        
+        this.gl.enable(this.gl.DEPTH_TEST);
+		this.viewBG.render((this.camera.y / 2000 + 1) * .25);
+		this.viewSun.render(this.camera.y / 2000 * .25);	
+		
+		this.gl.disable(this.gl.DEPTH_TEST);
 		this.viewMoutains.render(matrix, this.projection.matrix, invertCamera);
+		this.gl.enable(this.gl.DEPTH_TEST);
 		this.viewGiant.render();
+		
 	}
 
 })();
