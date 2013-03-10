@@ -95,7 +95,8 @@
 
 
 	p.render = function(camera, projection) {
-        this.model.render(this.shader, camera, projection, this.output);
+        // this.model.render(this.shader, camera, projection, this.output);
+        this.model.render(this.shader, camera, projection	);
 	}
 
 

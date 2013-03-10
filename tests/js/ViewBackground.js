@@ -23,15 +23,15 @@
 
         this.model.updateTextCoord(0, 0, 0);
         this.model.updateTextCoord(1, 1, 0);
-        this.model.updateTextCoord(2, 1, .5);
-        this.model.updateTextCoord(3, 0, .5); 
+        this.model.updateTextCoord(2, 1, 1);
+        this.model.updateTextCoord(3, 0, 1); 
         this.model.setTexture(0, textureBG);
         this.model.generateBuffer();
 	}
 
 
 	p.render = function(yoffset) {
-		yoffset = 0.37;
+		yoffset = 0.0;
 		this.shader.setParameter("yoffset", "uniform1f", yoffset);
 		this.model.render(this.shader, this.matrix, this.matrix);
 	}

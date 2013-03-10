@@ -72,11 +72,18 @@
 
             uniform sampler2D uSampler0;
             uniform sampler2D uSampler1;
+            uniform float saturation;
 
             void main(void) {
                 vec4 org = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
                 vec4 color = texture2D(uSampler1, vec2(vTextureCoord.s, vTextureCoord.t));
                 color.a = org.a;
+				color.rgb = color.rgb*org.rgb + org.rgb * .5;
+				color.rgb *= .7;
+				float avg = (color.r + color.g + color.b) / 3.0;
+				color.r = color.r * saturation + avg * (1.0 - saturation);
+				color.g = color.g * saturation + avg * (1.0 - saturation);
+				color.b = color.b * saturation + avg * (1.0 - saturation);
                 gl_FragColor = color;
             }
         </script>
@@ -85,6 +92,7 @@
         <script type="text/javascript" src="../js/libs/webgl-utils.js"></script> 
         <script type="text/javascript" src="../js/libs/glMatrix-0.9.5.min.js"></script> 
         <script type="text/javascript" src="../js/libs/webgl-debug.js"></script> 
+        <script type="text/javascript" src="../js/libs/dat.gui.min.js"></script> 
         <script type="text/javascript" src="../js/bongiovi/SimpleCamera.js"></script> 
         <script type="text/javascript" src="../js/bongiovi/HoverCamera.js"></script> 
         <script type="text/javascript" src="../js/bongiovi/ProjectionPerspectiveMatrix.js"></script> 
@@ -100,29 +108,26 @@
         <script type="text/javascript" src="js/ViewSun.js"></script> 
         <script type="text/javascript" src="js/ViewMountain.js"></script> 
         <script type="text/javascript" src="js/ViewGiant.js"></script> 
-        
+
 
 		<script type="text/javascript" >
-
-
         var scheduler = new Scheduler();
         var canvasGL, gl, stats, textureBG, textureSUN, textureMountain;
         var imgLoadedCount = 0;
         var test;
-        W = window.innerWidth;
+		var scale = .5;
+        W = window.innerWidth * scale;
         H = window.innerHeight;
 
 		function init() {
-            console.log( "init" );
-
             canvasGL = document.createElement("canvas");
             canvasGL.id = "canvasGL";
-            canvasGL.width = window.innerWidth;
+            canvasGL.width = window.innerWidth * scale;
             canvasGL.height = window.innerHeight;
             canvasGL.style.position = "absolute";
 
             gl = canvasGL.getContext("experimental-webgl");
-            gl.viewportWidth = window.innerWidth;
+            gl.viewportWidth = window.innerWidth * scale;
             gl.viewportHeight = window.innerHeight;
             document.body.appendChild(canvasGL);
 

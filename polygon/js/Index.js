@@ -13,6 +13,7 @@
 		this.gl = gl;
 		this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
         this.gl.enable(this.gl.BLEND);
+        this.gl.enable(this.gl.CULL_FACE);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
         this.gl.enable(this.gl.CULL_FACE);
         this.ratio = 1;
@@ -144,25 +145,28 @@
 		if(!this.isReadyToRender) return;
 		if(this.p1 == undefined) return;
 		
-		this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
+		// this.gl.clear(this.gl.COLOR_BUFFER_BIT | this.gl.DEPTH_BUFFER_BIT);
 		this.gl.enable(this.gl.CULL_FACE);
 		this.gl.disable(this.gl.DEPTH_TEST);
+		this.gl.enable(this.gl.CULL_FACE);
 		renderImage(this.gl, textureBG);
         this.gl.enable(this.gl.BLEND);
+		
 		
         
 		this.gl.enable(this.gl.DEPTH_TEST);
         this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE_MINUS_SRC_ALPHA);
 		
 		var cam = this.camera.update();
-		
+			
+		// renderImage(this.gl, this.viewMountain.output);
 		this.viewMountain.render(cam, this.projection.matrix);
-		this.viewDepth.render(cam, this.projection.matrix);
+		// this.viewDepth.render(cam, this.projection.matrix);
 		
 		// console.log(this.viewMountain.output);
-		// renderImage(this.gl, this.viewMountain.output);
+
 		
-		this.viewFinal.render(this.viewMountain.output, this.viewDepth.output);
+		// this.viewFinal.render(this.viewMountain.output, this.viewDepth.output);
         // this.viewFinal.render(this.viewMountain.output);
 	}
 	

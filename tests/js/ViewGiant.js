@@ -16,7 +16,7 @@
 		mat4.identity(this.matrix);
 
 		this.model = new bongiovi.GLModel(gl, 4);
-		var size = .37;
+		var size = .45;
 		var ratio = H/W;
 		var yoffset = -.35;
 
@@ -33,6 +33,7 @@
         this.model.generateBuffer();
 
         this.shader.setParameter("yoffset", "uniform1f", 0);
+        this.shader.setParameter("saturation", "uniform1f", 0.25);
 	}
 
 
@@ -43,7 +44,7 @@
 			this.textureColor = new GLTexture(this.gl, videoColor);
 			this.model.setTexture(1, this.textureColor);
 		}
-		else this.textureColor.updateTexture(videoColor);
+		// else this.textureColor.updateTexture(videoColor);
 
 		this.model.render(this.shader, this.matrix, this.matrix);
 	}

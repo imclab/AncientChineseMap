@@ -3,7 +3,13 @@
 (function() {
 	Combine0 = function() {
 		this.gl = null;
-		this.viewBG;
+		this.viewBG = null;
+		this.viewSun = null;
+		this.viewMountains = null;
+		this.viewGiant = null;
+		this.projection = null;
+		this.camera = null;
+		this.gui  = null;
 	}
 
 
@@ -22,16 +28,27 @@
         this.projection.perspective(45, W/H, .1, 10000);
         this.camera = new bongiovi.HoverCamera().init(1500);   
 		this._initViews();
+		this._initControls();
 		scheduler.addEF(this, this.render, []);
 
 		return this;
+	}
+	
+	
+	p._initControls = function() {
+		this.gui = new dat.GUI();
+	}
+	
+	
+	p.update = function() {
+		
 	}
 
 
 	p._initViews = function() {
 		this.viewBG = new ViewBackground(this.gl, "shader-vs-bg", "shader-fs");
 		this.viewSun = new ViewSun(this.gl, "shader-vs-bg", "shader-fs");
-		this.viewMoutains = new ViewMountain(this.gl, "shader-vs-facefront", "shader-fs");
+		this.viewMountains = new ViewMountain(this.gl, "shader-vs-facefront", "shader-fs");
 		this.viewGiant = new ViewGiant(this.gl, "shader-vs-facefront", "shader-fs-cutting");
 	}
 
@@ -50,7 +67,7 @@
 		this.viewSun.render(this.camera.y / 2000 * .25);	
 		
 		this.gl.disable(this.gl.DEPTH_TEST);
-		this.viewMoutains.render(matrix, this.projection.matrix, invertCamera);
+		this.viewMountains.render(matrix, this.projection.matrix, invertCamera);
 		this.gl.enable(this.gl.DEPTH_TEST);
 		this.viewGiant.render();
 		
