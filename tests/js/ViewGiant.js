@@ -33,7 +33,7 @@
         this.model.generateBuffer();
 
         this.shader.setParameter("yoffset", "uniform1f", 0);
-        this.shader.setParameter("saturation", "uniform1f", 0.25);
+        this.shader.setParameter("saturation", "uniform1f", 0.75);
 	}
 
 
@@ -44,7 +44,7 @@
 			this.textureColor = new GLTexture(this.gl, videoColor);
 			this.model.setTexture(1, this.textureColor);
 		}
-		// else this.textureColor.updateTexture(videoColor);
+		else this.textureColor.updateTexture(videoColor);
 
 		this.model.render(this.shader, this.matrix, this.matrix);
 	}

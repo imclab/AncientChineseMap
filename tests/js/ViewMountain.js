@@ -26,7 +26,7 @@
 			var o = this.mountains[i];
 			var tx = (o.y - num/2) * range;
 			var tz = -(o.x - num/2) * range;
-			var ty = o.height * .1;
+			var ty = o.height;
 
 			var yoffset = 200;
 
@@ -60,7 +60,7 @@
 		for ( var i=0; i<NUM_MOUNTAINS; i++) {
 			var tx = Math.floor(Math.random() * num);
 			var ty = Math.floor(Math.random() * num);
-			var top = Math.floor(2000 + Math.random() * 2000);
+			var top = Math.floor(250 + Math.random() * 500);
 			var type = Math.floor(Math.random() * 3);
 			var o = {x:tx, y:ty, height:top, type:type};
 			this.mountains.push(o);

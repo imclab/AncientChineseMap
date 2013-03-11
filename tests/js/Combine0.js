@@ -10,6 +10,8 @@
 		this.projection = null;
 		this.camera = null;
 		this.gui  = null;
+		this.v0 = null;
+		this.mixer = null;
 	}
 
 
@@ -29,8 +31,10 @@
         this.camera = new bongiovi.HoverCamera().init(1500);   
 		this._initViews();
 		this._initControls();
+		this.cross = vec3.create([1, 1, 1]);
 		scheduler.addEF(this, this.render, []);
 
+		this.mixer = new SoundMixer().init();
 		return this;
 	}
 	
@@ -61,7 +65,10 @@
         mat4.inverse(invert)
         var invertCamera = mat4.toInverseMat3(invert);
 
-        
+        var theta = Math.atan2(this.camera.z , this.camera.x);
+        this.mixer.update(theta * 180 / Math.PI + 180);
+
+
         this.gl.enable(this.gl.DEPTH_TEST);
 		this.viewBG.render((this.camera.y / 2000 + 1) * .25);
 		this.viewSun.render(this.camera.y / 2000 * .25);	
@@ -70,7 +77,7 @@
 		this.viewMountains.render(matrix, this.projection.matrix, invertCamera);
 		this.gl.enable(this.gl.DEPTH_TEST);
 		this.viewGiant.render();
-		
 	}
+
 
 })();
