@@ -91,7 +91,7 @@
 		else if ( angle > 210 && angle < 330) offset = 1;
 		else offset = 2;
 
-		var range = 30;
+		var range = 60;
 		var gain0, gain1;
 		var theta;
 		var PI2 = Math.PI * .5;

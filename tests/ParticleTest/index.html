@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Particle Test</title>
+        <link rel="stylesheet" type="text/css" href="css/combine0.css" />
+        <style type="text/css">
+          html { height: 100% background-color:#FFFFFF;}
+          body { height: 100%; margin: 0px; padding: 0px }
+          #map_canvas { height: 100% }
+          #status { color: #FF0000; position:fixed; top:15px; left:105px; z-index:200;}
+        </style>
+
+
+        <script id="shader-vs-bg" type="x-shader/x-vertex">
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+            uniform float yoffset;
+
+            varying vec2 vTextureCoord;
+
+            void main(void) {
+                gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vec2 texCoord = aTextureCoord;
+                texCoord.y += yoffset;
+                vTextureCoord = texCoord;
+            }
+        </script>
+
+        <script id="shader-vs-particle" type="x-shader/x-vertex">
+            attribute vec3 aVertexPosition;
+            attribute vec2 aTextureCoord;
+            attribute vec2 sizeOffset;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+            uniform mat3 invertCamera;
+
+            varying vec2 vTextureCoord;
+            varying vec3 vVertexCoord;
+            varying vec3 vOutputCoord;
+
+            void main(void) {
+                vec3 size = vec3(sizeOffset, 0.0);
+                vec3 adjustSize = size * invertCamera;
+                vec3 pos = aVertexPosition + adjustSize;
+                vec4 finalPos = uPMatrix * uMVMatrix * vec4(pos, 1.0);
+                vOutputCoord = finalPos.xyz;
+                gl_Position = finalPos;
+                vTextureCoord = aTextureCoord;
+                vVertexCoord = finalPos.xyz;
+            }
+        </script>
+
+        <script id="shader-fs" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+            varying vec3 vOutputCoord;
+
+            uniform sampler2D uSampler0;
+
+            void main(void) {
+                vec4 color = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+                gl_FragColor = color;
+            }
+        </script>
+
+        <script id="shader-fs-dof" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+            varying vec3 vOutputCoord;
+
+            uniform sampler2D uSampler0;
+
+            void main(void) {
+                vec4 color = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+                color.a *= cos( (abs(vOutputCoord.z - 1400.0)) / 500.0 * 3.14 * .5);
+                gl_FragColor = color;
+            }
+        </script>
+
+        <script id="shader-fs-cutting" type="x-shader/x-fragment">
+            precision mediump float;
+
+            varying vec2 vTextureCoord;
+
+            uniform sampler2D uSampler0;
+            uniform sampler2D uSampler1;
+            uniform float saturation;
+
+            void main(void) {
+                vec4 org = texture2D(uSampler0, vec2(vTextureCoord.s, vTextureCoord.t));
+                vec4 color = texture2D(uSampler1, vec2(vTextureCoord.s, vTextureCoord.t));
+                color.a = org.a;
+				color.rgb = color.rgb*org.rgb + org.rgb * .5;
+				color.rgb *= 1.2;
+				float avg = (color.r + color.g + color.b) / 3.0;
+				color.r = color.r * saturation + avg * (1.0 - saturation);
+				color.g = color.g * saturation + avg * (1.0 - saturation);
+				color.b = color.b * saturation + avg * (1.0 - saturation);
+                gl_FragColor = color;
+            }
+        </script>
+		
+        <script type="text/javascript" src="js/libs/pxloader/PxLoader.js"></script>
+        <script type="text/javascript" src="js/libs/pxloader/PxLoaderImage.js"></script>
+        <script type="text/javascript" src="js/libs/Stats.js"></script> 
+        <script type="text/javascript" src="js/libs/webgl-utils.js"></script> 
+        <script type="text/javascript" src="js/libs/glMatrix-0.9.5.min.js"></script> 
+        <script type="text/javascript" src="js/libs/webgl-debug.js"></script> 
+        <script type="text/javascript" src="js/libs/dat.gui.min.js"></script> 
+        <script type="text/javascript" src="js/libs/buffer-loader.js"></script> 
+        <script type="text/javascript" src="js/bongiovi/SimpleCamera.js"></script> 
+        <script type="text/javascript" src="js/bongiovi/HoverCamera.js"></script> 
+        <script type="text/javascript" src="js/bongiovi/ProjectionPerspectiveMatrix.js"></script> 
+        <script type="text/javascript" src="js/bongiovi/GLModelShader.js"></script> 
+        <script type="text/javascript" src="js/bongiovi/GLModel.js"></script> 
+        <script type="text/javascript" src="js/bongiovi/GLTexture.js"></script> 
+        <script type="text/javascript" src="js/bongiovi/GLTextureFilter.js"></script> 
+        <script type="text/javascript" src="js/bongiovi/Scheduler.js"></script> 
+
+        <script type="text/javascript" src="js/Particle.js"></script> 
+        <script type="text/javascript" src="js/View.js"></script> 
+        <script type="text/javascript" src="js/ViewParticles.js"></script> 
+        <script type="text/javascript" src="js/Index.js"></script> 
+
+
+		<script type="text/javascript" >
+        var scheduler = new Scheduler();
+        var canvasGL, gl, stats, textureBG, textureSUN, textureMountain;
+        var imgLoadedCount = 0;
+        var test;
+		var scale = 1;
+        W = window.innerWidth * scale;
+        H = window.innerHeight;
+
+		function init() {
+            canvasGL = document.createElement("canvas");
+            canvasGL.id = "canvasGL";
+            canvasGL.width = window.innerWidth * scale;
+            canvasGL.height = window.innerHeight;
+            canvasGL.style.position = "absolute";
+
+            gl = canvasGL.getContext("experimental-webgl", {premultipliedAlpha:true});
+            gl.viewportWidth = window.innerWidth * scale;
+            gl.viewportHeight = window.innerHeight;
+            document.body.appendChild(canvasGL);
+
+            stats = new Stats();
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.top = '0px';
+            document.body.appendChild( stats.domElement );
+            scheduler.addEF(stats, stats.update, []);
+
+            test = new Index(gl).init();
+        }
+
+
+		</script>
+		
+    </head>
+        
+
+    <body onload="init()">
+    	<div id="map_canvas" style="width:50%; height:100%; z-index:1; position:absolute;"></div>
+    </body>
+</html>

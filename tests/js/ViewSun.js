@@ -39,7 +39,7 @@
 
 	p.render = function(yoffset) {
 		mat4.identity(this.mvMatrix);
-		mat4.translate(this.mvMatrix, [0, .25, 0]);
+		mat4.translate(this.mvMatrix, [0, .35, 0]);
 		this.model.render(this.shader, this.mvMatrix, this.matrix);
 	}
 

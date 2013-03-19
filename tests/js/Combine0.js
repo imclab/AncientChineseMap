@@ -19,6 +19,10 @@
 
 
 	p.init = function(gl) {
+		this.container = document.createElement('div');
+		// document.body.appendChild(this.container);
+		this.container.className = "debug";
+
 		this.gl = gl;
 		this.gl.viewport(0, 0, this.gl.viewportWidth, this.gl.viewportHeight);
 		this.gl.enable(this.gl.BLEND);
@@ -40,7 +44,7 @@
 	
 	
 	p._initControls = function() {
-		this.gui = new dat.GUI();
+		// this.gui = new dat.GUI();
 	}
 	
 	
@@ -52,7 +56,7 @@
 	p._initViews = function() {
 		this.viewBG = new ViewBackground(this.gl, "shader-vs-bg", "shader-fs");
 		this.viewSun = new ViewSun(this.gl, "shader-vs-bg", "shader-fs");
-		this.viewMountains = new ViewMountain(this.gl, "shader-vs-facefront", "shader-fs");
+		this.viewMountains = new ViewMountain(this.gl, "shader-vs-facefront", "shader-fs-dof");
 		this.viewGiant = new ViewGiant(this.gl, "shader-vs-facefront", "shader-fs-cutting");
 	}
 
@@ -66,14 +70,20 @@
         var invertCamera = mat4.toInverseMat3(invert);
 
         var theta = Math.atan2(this.camera.z , this.camera.x);
-        this.mixer.update(theta * 180 / Math.PI + 180);
+        var angle = Math.floor(theta * 180 / Math.PI + 180);
+        this.mixer.update(angle);
+        var page;
+        if(angle > 90 && angle < 210) page = "Page 1, ";
+        else if(angle > 210 && angle < 330) page = "Page 2, ";
+        else page = "Page 3, ";
+        this.container.innerHTML = page + "Angle : " + Math.floor(angle).toString();
 
 
-        this.gl.enable(this.gl.DEPTH_TEST);
+        this.gl.disable(this.gl.DEPTH_TEST);
 		this.viewBG.render((this.camera.y / 2000 + 1) * .25);
 		this.viewSun.render(this.camera.y / 2000 * .25);	
+		// this.gl.enable(this.gl.DEPTH_TEST);
 		
-		this.gl.disable(this.gl.DEPTH_TEST);
 		this.viewMountains.render(matrix, this.projection.matrix, invertCamera);
 		this.gl.enable(this.gl.DEPTH_TEST);
 		this.viewGiant.render();
