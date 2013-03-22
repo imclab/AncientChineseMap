@@ -18,7 +18,7 @@
 		this.model = new bongiovi.GLModel(gl, 4);
 		var size = .45;
 		var ratio = H/W;
-		var yoffset = -.35;
+		var yoffset = -.4;
 
         this.model.updateVertex(0, -size*ratio,  yoffset, 0.5);
         this.model.updateVertex(1,  size*ratio,  yoffset, 0.5);

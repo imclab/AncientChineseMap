@@ -28,7 +28,7 @@
 			var tz = -(o.x - num/2) * range;
 			var ty = o.height;
 
-			var yoffset = 200;
+			var yoffset = 300;
 
 			this.model.updateVertex(i*4+1, tx, yoffset, tz);
 			this.model.updateVertex(i*4+2, tx, yoffset, tz);
