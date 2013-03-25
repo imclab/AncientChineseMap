@@ -18,6 +18,8 @@
 
 		this.viewParticles = null;
 		// this.gl.disable(this)
+		var that = this
+		window.addEventListener("resize", function(e) {that._onResize(e);	}	);
 	}
 
 	var p = Index.prototype;
@@ -26,7 +28,8 @@
 		var that = this;
 		this.loader = new PxLoader();
 		this.bg = this.loader.addImage("images/giantBG.jpg");
-		this.particle = this.loader.addImage("images/sun.png");
+		this.particle = this.loader.addImage("images/flower.png");
+		this.sun = this.loader.addImage("images/sun.png");
 		this.loader.addCompletionListener(function(){ that._onImageLoaded()} );
 		this.loader.start();
 
@@ -34,9 +37,15 @@
 	}
 
 
+	p._onResize = function(e) {
+		this.gl.viewport(0, 0, window.innerWidth, window.innerHeight);
+	}
+
+
 	p._onImageLoaded = function() {
 		this.textureBg = new GLTexture(this.gl, this.bg);
 		this.textureParticle = new GLTexture(this.gl, this.particle);
+		this.textureSun = new GLTexture(this.gl, this.sun);
 
 		this.projection = new bongiovi.ProjectionPerspectiveMatrix();
         this.projection.perspective(45, W/H, .1, 10000);
@@ -44,16 +53,18 @@
 
 		this.viewBg = new ViewBg(this.gl, "shader-vs-bg", "shader-fs", this.textureBg);
 		this.viewParticles = new ViewParticles(this.gl, "shader-vs-particle", "shader-fs-particle", this.textureParticle);
+		this.viewSun = new ViewSun(this.gl, "shader-vs-bg", "shader-fs", this.textureSun);
+		this.viewTree = new ViewTree(this.gl, "shader-vs-bg", "shader-fs", this.textureSun);
 
 		gui = new dat.GUI();
-		gui.add(this.viewParticles, "numParticles", 500, 1000);
+		gui.add(this.viewParticles, "numParticles", 500, 2000);
 		gui.add(this.viewParticles, "numEmit", 50, 100);
-		gui.add(this.viewParticles, "minLife", 10, 100);
-		gui.add(this.viewParticles, "maxLife", 10, 200);
-		gui.add(this.viewParticles, "minSize", 10, 200);
-		gui.add(this.viewParticles, "maxSize", 10, 200);
-		gui.add(this.viewParticles, "speed", 1, 50);
-		gui.add(this.viewParticles, "range", 1, 2000);
+		gui.add(this.viewParticles, "minLife", 10, 200);
+		gui.add(this.viewParticles, "maxLife", 10, 300);
+		gui.add(this.viewParticles, "minSize", 10, 100);
+		gui.add(this.viewParticles, "maxSize", 10, 100);
+		gui.add(this.viewParticles, "speed", 1, 10);
+		gui.add(this.viewParticles, "range", 50, 500);
 
 		scheduler.addEF(this, this._loop, []);
 	}
@@ -61,6 +72,7 @@
 
 	p._loop = function() {
 		this.viewBg.render();
+		this.viewSun.render();
 		this.viewParticles.camera = this.camera;
 		this.viewParticles.render(this.projection.matrix);
 	}

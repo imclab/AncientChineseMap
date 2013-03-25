@@ -154,6 +154,7 @@
             }
         </script>
 		
+        <script type="text/javascript" src="js/libs/leapjs-master/leap.js"></script>
         <script type="text/javascript" src="js/libs/pxloader/PxLoader.js"></script>
         <script type="text/javascript" src="js/libs/pxloader/PxLoaderImage.js"></script>
         <script type="text/javascript" src="js/libs/Stats.js"></script> 
@@ -175,6 +176,8 @@
         <script type="text/javascript" src="js/View.js"></script> 
         <script type="text/javascript" src="js/ViewBg.js"></script> 
         <script type="text/javascript" src="js/ViewParticles.js"></script> 
+        <script type="text/javascript" src="js/ViewSun.js"></script> 
+        <script type="text/javascript" src="js/ViewTree.js"></script> 
         <script type="text/javascript" src="js/Index.js"></script> 
 
 
@@ -206,6 +209,17 @@
             scheduler.addEF(stats, stats.update, []);
 
             test = new Index(gl).init();
+
+            window.addEventListener('resize', _onResize);
+        }
+
+
+        function _onResize(e) {
+            console.log( "Resize" );
+            canvasGL.width = window.innerWidth;
+            canvasGL.height = window.innerHeight;
+            gl.viewportWidth = window.innerWidth;
+            gl.viewportHeight = window.innerHeight;
         }
 
 
